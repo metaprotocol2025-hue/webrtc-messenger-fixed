@@ -22,7 +22,27 @@
   </div>
 
   <script>
-    const socket = io("/", { transports: ["websocket"] });
+    const socket = io("/", { 
+      transports: ["websocket", "polling"],
+      timeout: 20000,
+      forceNew: true
+    });
+
+    // Socket.IO event handlers
+    socket.on('connect', () => {
+      console.log('✅ Подключен к серверу');
+      document.getElementById('status').textContent = '✅ Подключен к серверу';
+    });
+
+    socket.on('disconnect', () => {
+      console.log('❌ Отключен от сервера');
+      document.getElementById('status').textContent = '❌ Отключен от сервера';
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Ошибка подключения:', error);
+      document.getElementById('status').textContent = '❌ Ошибка подключения';
+    });
 
     async function createUser() {
       const name = document.getElementById("username").value.trim();
