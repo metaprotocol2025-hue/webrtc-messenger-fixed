@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple WebRTC Test</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 10px;
+    }
+    video {
+      width: 100%;
+      max-width: 300px;
+      background: #000;
+      border-radius: 10px;
+      margin: 10px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      margin: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .log {
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔒 Simple WebRTC Test</h1>
+    
+    <div class="status" id="status">Отключен от сервера</div>
+    
+    <div>
+      <input type="text" id="usernameInput" placeholder="Ваше имя" value="USER1">
+      <button onclick="setUsername()">Установить имя</button>
+    </div>
+    
+    <div>
+      <input type="text" id="roomInput" placeholder="Название комнаты" value="test-room">
+      <button onclick="joinRoom()">Войти в комнату</button>
+    </div>
+    
+    <div>
+      <button onclick="startCall()" id="startBtn">Начать звонок</button>
+      <button onclick="endCall()" id="endBtn" disabled>Завершить звонок</button>
+    </div>
+    
+    <div>
+      <video id="localVideo" autoplay muted></video>
+      <video id="remoteVideo" autoplay></video>
+    </div>
+    
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    let socket = null;
+    let localStream = null;
+    let peerConnection = null;
+    let username = null;
+    let roomId = null;
+    let isConnected = false;
+
+    function log(message) {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logDiv.innerHTML += `[${time}] ${message}<br>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(message);
+    }
+
+    function setUsername() {
+      username = document.getElementById('usernameInput').value.trim();
+      if (!username) {
+        alert('Введите имя!');
+        return;
+      }
+      log(`Имя установлено: ${username}`);
+      connectSocket();
+    }
+
+    function connectSocket() {
+      log('Подключаемся к серверу...');
+      socket = io("/", { 
+        transports: ["websocket", "polling"],
+        timeout: 20000
+      });
+
+      socket.on('connect', () => {
+        log('✅ Подключен к серверу');
+        document.getElementById('status').textContent = '✅ Подключен к серверу';
+        isConnected = true;
+      });
+
+      socket.on('disconnect', () => {
+        log('❌ Отключен от сервера');
+        document.getElementById('status').textContent = '❌ Отключен от сервера';
+        isConnected = false;
+      });
+
+      socket.on('user-joined', (data) => {
+        log(`Пользователь присоединился: ${data.username}`);
+      });
+
+      socket.on('user-left', (data) => {
+        log(`Пользователь покинул: ${data.username}`);
+      });
+
+      socket.on('offer', async (data) => {
+        log(`Получен offer от ${data.senderName}`);
+        try {
+          if (!peerConnection) {
+            setupPeerConnection();
+          }
+          await peerConnection.setRemoteDescription(data.offer);
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          
+          socket.emit('answer', {
+            target: data.sender,
+            answer: answer
+          });
+          log('Answer отправлен');
+        } catch (error) {
+          log(`Ошибка обработки offer: ${error.message}`);
+        }
+      });
+
+      socket.on('answer', async (data) => {
+        log(`Получен answer от ${data.senderName}`);
+        try {
+          await peerConnection.setRemoteDescription(data.answer);
+        } catch (error) {
+          log(`Ошибка обработки answer: ${error.message}`);
+        }
+      });
+
+      socket.on('ice-candidate', async (data) => {
+        log(`Получен ICE candidate от ${data.senderName}`);
+        try {
+          if (peerConnection) {
+            await peerConnection.addIceCandidate(data.candidate);
+          }
+        } catch (error) {
+          log(`Ошибка обработки ICE candidate: ${error.message}`);
+        }
+      });
+    }
+
+    function joinRoom() {
+      if (!isConnected) {
+        alert('Нет подключения к серверу');
+        return;
+      }
+
+      roomId = document.getElementById('roomInput').value.trim();
+      if (!roomId) {
+        alert('Введите название комнаты');
+        return;
+      }
+
+      socket.emit('join-room', roomId, username);
+      log(`Вошли в комнату: ${roomId}`);
+    }
+
+    async function startCall() {
+      try {
+        log('Запрашиваем доступ к камере/микрофону...');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        
+        document.getElementById('localVideo').srcObject = localStream;
+        log('✅ Доступ к камере/микрофону получен');
+        
+        setupPeerConnection();
+        
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('endBtn').disabled = false;
+        
+        log('Звонок начат');
+      } catch (error) {
+        log(`❌ Ошибка доступа к камере/микрофону: ${error.message}`);
+        alert('Не удалось получить доступ к камере/микрофону');
+      }
+    }
+
+    function setupPeerConnection() {
+      log('Настраиваем WebRTC соединение...');
+      
+      const configuration = {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      };
+
+      peerConnection = new RTCPeerConnection(configuration);
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          log('Отправляем ICE candidate');
+          socket.emit('ice-candidate', {
+            target: 'all',
+            candidate: event.candidate
+          });
+        } else {
+          log('ICE gathering завершен');
+        }
+      };
+
+      peerConnection.ontrack = (event) => {
+        log('✅ Получен удаленный поток!');
+        document.getElementById('remoteVideo').srcObject = event.streams[0];
+      };
+
+      peerConnection.onconnectionstatechange = () => {
+        log(`Состояние соединения: ${peerConnection.connectionState}`);
+        if (peerConnection.connectionState === 'connected') {
+          log('🎉 WebRTC соединение установлено!');
+        }
+      };
+
+      peerConnection.oniceconnectionstatechange = () => {
+        log(`ICE состояние: ${peerConnection.iceConnectionState}`);
+      };
+
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+        log('Локальный поток добавлен в peer connection');
+      }
+
+      createOffer();
+    }
+
+    async function createOffer() {
+      try {
+        log('Создаем offer...');
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        socket.emit('offer', {
+          target: 'all',
+          offer: offer
+        });
+        log('✅ Offer отправлен');
+      } catch (error) {
+        log(`❌ Ошибка создания offer: ${error.message}`);
+      }
+    }
+
+    function endCall() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('remoteVideo').srcObject = null;
+
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('endBtn').disabled = true;
+
+      log('Звонок завершен');
+    }
+
+    // Автоматически устанавливаем имя при загрузке
+    window.onload = function() {
+      setUsername();
+    };
+  </script>
+</body>
+</html>
