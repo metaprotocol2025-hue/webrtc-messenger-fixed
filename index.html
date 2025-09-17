@@ -19,6 +19,67 @@
       overflow: hidden;
     }
 
+    .welcome-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .welcome-card {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .welcome-card h1 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+
+    .welcome-card input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .welcome-card input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 15px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      background: #45a049;
+    }
+
     .container {
       display: flex;
       height: 100vh;
@@ -71,7 +132,7 @@
       margin-bottom: 20px;
     }
 
-    .btn {
+    .btn-control {
       padding: 12px 24px;
       border: none;
       border-radius: 8px;
@@ -228,51 +289,6 @@
     .hidden {
       display: none;
     }
-
-    .welcome-screen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(10px);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-
-    .welcome-card {
-      background: white;
-      padding: 40px;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 400px;
-      width: 90%;
-    }
-
-    .welcome-card h1 {
-      color: #333;
-      margin-bottom: 20px;
-      font-size: 28px;
-    }
-
-    .welcome-card input {
-      width: 100%;
-      padding: 15px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
-
-    .welcome-card input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
   </style>
 </head>
 <body>
@@ -280,12 +296,12 @@
     <div class="welcome-card">
       <h1>🔒 WebRTC Video Messenger</h1>
       <p style="margin-bottom: 20px; color: #666;">Введите ваше имя для входа</p>
-      <input type="text" id="usernameInput" placeholder="Ваше имя" maxlength="20">
-      <button class="btn btn-primary" onclick="enterApp()">Войти в мессенджер</button>
+      <input type="text" id="usernameInput" placeholder="Ваше имя" maxlength="20" value="АНТОН">
+      <button class="btn" onclick="enterApp()">Войти в мессенджер</button>
     </div>
   </div>
 
-  <div class="container" id="mainApp" style="display: none;">
+  <div class="container hidden" id="mainApp">
     <div class="video-section">
       <div class="video-container">
         <div class="video-box">
@@ -299,17 +315,17 @@
       </div>
       
       <div class="controls">
-        <button class="btn btn-primary" id="startBtn" onclick="startCall()">📞 Начать звонок</button>
-        <button class="btn btn-danger" id="endBtn" onclick="endCall()" disabled>📞 Завершить</button>
-        <button class="btn btn-secondary" id="muteBtn" onclick="toggleMute()" disabled>🔇 Выключить звук</button>
-        <button class="btn btn-secondary" id="videoBtn" onclick="toggleVideo()" disabled>📹 Выключить видео</button>
+        <button class="btn-control btn-primary" id="startBtn" onclick="startCall()">📞 Начать звонок</button>
+        <button class="btn-control btn-danger" id="endBtn" onclick="endCall()" disabled>📞 Завершить</button>
+        <button class="btn-control btn-secondary" id="muteBtn" onclick="toggleMute()" disabled>🔇 Выключить звук</button>
+        <button class="btn-control btn-secondary" id="videoBtn" onclick="toggleVideo()" disabled>📹 Выключить видео</button>
       </div>
     </div>
 
     <div class="room-section">
       <div class="room-input">
         <input type="text" id="roomInput" placeholder="Название комнаты" value="room1">
-        <button class="btn btn-primary" onclick="joinRoom()">Войти в комнату</button>
+        <button class="btn-control btn-primary" onclick="joinRoom()">Войти в комнату</button>
       </div>
       
       <div class="status" id="status">❌ Отключен от сервера</div>
@@ -318,358 +334,99 @@
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input">
           <input type="text" id="messageInput" placeholder="Введите сообщение..." disabled>
-          <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()" disabled>Отправить</button>
+          <button class="btn-control btn-primary" id="sendBtn" onclick="sendMessage()" disabled>Отправить</button>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    class WebRTCMessenger {
-      constructor() {
-        this.socket = null;
-        this.localStream = null;
-        this.remoteStream = null;
-        this.peerConnection = null;
-        this.roomId = null;
-        this.username = null;
-        this.isConnected = false;
-        this.isMuted = false;
-        this.isVideoOff = false;
-        this.currentCall = null;
+    // Глобальные переменные
+    let socket = null;
+    let localStream = null;
+    let remoteStream = null;
+    let peerConnection = null;
+    let roomId = null;
+    let username = null;
+    let isConnected = false;
+    let isMuted = false;
+    let isVideoOff = false;
 
-        this.initializeElements();
-        this.setupEventListeners();
-      }
+    // Элементы DOM
+    let welcomeScreen, mainApp, usernameInput, localVideo, remoteVideo;
+    let roomInput, status, chatMessages, messageInput, sendBtn;
+    let startBtn, endBtn, muteBtn, videoBtn;
 
-      initializeElements() {
-        this.welcomeScreen = document.getElementById('welcomeScreen');
-        this.mainApp = document.getElementById('mainApp');
-        this.usernameInput = document.getElementById('usernameInput');
-        this.localVideo = document.getElementById('localVideo');
-        this.remoteVideo = document.getElementById('remoteVideo');
-        this.roomInput = document.getElementById('roomInput');
-        this.status = document.getElementById('status');
-        this.chatMessages = document.getElementById('chatMessages');
-        this.messageInput = document.getElementById('messageInput');
-        this.sendBtn = document.getElementById('sendBtn');
-        this.startBtn = document.getElementById('startBtn');
-        this.endBtn = document.getElementById('endBtn');
-        this.muteBtn = document.getElementById('muteBtn');
-        this.videoBtn = document.getElementById('videoBtn');
-      }
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM загружен');
+      
+      // Получаем элементы
+      welcomeScreen = document.getElementById('welcomeScreen');
+      mainApp = document.getElementById('mainApp');
+      usernameInput = document.getElementById('usernameInput');
+      localVideo = document.getElementById('localVideo');
+      remoteVideo = document.getElementById('remoteVideo');
+      roomInput = document.getElementById('roomInput');
+      status = document.getElementById('status');
+      chatMessages = document.getElementById('chatMessages');
+      messageInput = document.getElementById('messageInput');
+      sendBtn = document.getElementById('sendBtn');
+      startBtn = document.getElementById('startBtn');
+      endBtn = document.getElementById('endBtn');
+      muteBtn = document.getElementById('muteBtn');
+      videoBtn = document.getElementById('videoBtn');
 
-      setupEventListeners() {
-        this.messageInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            this.sendMessage();
-          }
-        });
+      // Фокус на поле ввода
+      usernameInput.focus();
 
-        this.roomInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') {
-            this.joinRoom();
-          }
-        });
-      }
-
-
-      connectSocket() {
-        this.socket = io("/", { 
-          transports: ["websocket", "polling"],
-          timeout: 20000,
-          forceNew: true
-        });
-
-        this.socket.on('connect', () => {
-          console.log('✅ Подключен к серверу');
-          this.status.textContent = '✅ Подключен к серверу';
-          this.status.className = 'status connected';
-          this.isConnected = true;
-        });
-
-        this.socket.on('disconnect', () => {
-          console.log('❌ Отключен от сервера');
-          this.status.textContent = '❌ Отключен от сервера';
-          this.status.className = 'status error';
-          this.isConnected = false;
-          this.resetCall();
-        });
-
-        this.socket.on('connect_error', (error) => {
-          console.error('Ошибка подключения:', error);
-          this.status.textContent = '❌ Ошибка подключения';
-          this.status.className = 'status error';
-        });
-
-        this.socket.on('user-joined', (data) => {
-          console.log('Пользователь присоединился:', data);
-          this.addMessage('system', `${data.username} присоединился к комнате`);
-        });
-
-        this.socket.on('user-left', (data) => {
-          console.log('Пользователь покинул:', data);
-          this.addMessage('system', `${data.username} покинул комнату`);
-          this.resetCall();
-        });
-
-        this.socket.on('offer', async (data) => {
-          console.log('Получен offer от', data.senderName);
-          await this.handleOffer(data.offer);
-        });
-
-        this.socket.on('answer', async (data) => {
-          console.log('Получен answer от', data.senderName);
-          await this.handleAnswer(data.answer);
-        });
-
-        this.socket.on('ice-candidate', async (data) => {
-          console.log('Получен ICE candidate от', data.senderName);
-          await this.handleIceCandidate(data.candidate);
-        });
-
-        this.socket.on('chat-message', (message) => {
-          this.addMessage(message.username, message.message);
-        });
-
-        this.socket.on('call-user', (data) => {
-          console.log('Входящий звонок от', data.callerName);
-          if (confirm(`${data.callerName} звонит вам. Принять звонок?`)) {
-            this.acceptCall(data.caller);
-          }
-        });
-
-        this.socket.on('call-accepted', (data) => {
-          console.log('Звонок принят', data.calleeName);
-          this.startCall();
-        });
-
-        this.socket.on('call-rejected', (data) => {
-          console.log('Звонок отклонен', data.calleeName);
-          alert('Звонок отклонен');
-          this.resetCall();
-        });
-
-        this.socket.on('call-ended', (data) => {
-          console.log('Звонок завершен', data.endedByName);
-          this.resetCall();
-        });
-      }
-
-      async joinRoom() {
-        if (!this.isConnected) {
-          alert('Нет подключения к серверу');
-          return;
+      // Обработчик Enter для поля ввода имени
+      usernameInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          enterApp();
         }
+      });
 
-        const roomId = this.roomInput.value.trim();
-        if (!roomId) {
-          alert('Введите название комнаты');
-          return;
+      // Обработчик Enter для поля ввода комнаты
+      roomInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          joinRoom();
         }
+      });
 
-        this.roomId = roomId;
-        this.socket.emit('join-room', roomId, this.username);
-        this.status.textContent = `✅ В комнате: ${roomId}`;
-        this.status.className = 'status connected';
-        
-        this.messageInput.disabled = false;
-        this.sendBtn.disabled = false;
-        this.startBtn.disabled = false;
-      }
-
-      async startCall() {
-        try {
-          this.localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-          });
-          
-          this.localVideo.srcObject = this.localStream;
-          this.setupPeerConnection();
-          
-          this.startBtn.disabled = true;
-          this.endBtn.disabled = false;
-          this.muteBtn.disabled = false;
-          this.videoBtn.disabled = false;
-          
-          this.addMessage('system', 'Звонок начат');
-        } catch (error) {
-          console.error('Ошибка доступа к камере/микрофону:', error);
-          alert('Не удалось получить доступ к камере/микрофону');
+      // Обработчик Enter для поля ввода сообщения
+      messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          sendMessage();
         }
-      }
+      });
 
-      setupPeerConnection() {
-        const configuration = {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ]
-        };
+      console.log('Инициализация завершена');
+    });
 
-        this.peerConnection = new RTCPeerConnection(configuration);
-
-        this.peerConnection.onicecandidate = (event) => {
-          if (event.candidate) {
-            this.socket.emit('ice-candidate', {
-              target: this.currentCall,
-              candidate: event.candidate
-            });
-          }
-        };
-
-        this.peerConnection.ontrack = (event) => {
-          console.log('Получен удаленный поток');
-          this.remoteStream = event.streams[0];
-          this.remoteVideo.srcObject = this.remoteStream;
-        };
-
-        this.localStream.getTracks().forEach(track => {
-          this.peerConnection.addTrack(track, this.localStream);
-        });
-      }
-
-      async handleOffer(offer) {
-        if (!this.peerConnection) {
-          this.setupPeerConnection();
-        }
-
-        await this.peerConnection.setRemoteDescription(offer);
-        const answer = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answer);
-
-        this.socket.emit('answer', {
-          target: this.currentCall,
-          answer: answer
-        });
-      }
-
-      async handleAnswer(answer) {
-        await this.peerConnection.setRemoteDescription(answer);
-      }
-
-      async handleIceCandidate(candidate) {
-        if (this.peerConnection) {
-          await this.peerConnection.addIceCandidate(candidate);
-        }
-      }
-
-      endCall() {
-        this.resetCall();
-        this.socket.emit('end-call');
-      }
-
-      resetCall() {
-        if (this.localStream) {
-          this.localStream.getTracks().forEach(track => track.stop());
-          this.localStream = null;
-        }
-
-        if (this.peerConnection) {
-          this.peerConnection.close();
-          this.peerConnection = null;
-        }
-
-        this.localVideo.srcObject = null;
-        this.remoteVideo.srcObject = null;
-        this.remoteStream = null;
-        this.currentCall = null;
-
-        this.startBtn.disabled = false;
-        this.endBtn.disabled = true;
-        this.muteBtn.disabled = true;
-        this.videoBtn.disabled = true;
-        this.isMuted = false;
-        this.isVideoOff = false;
-
-        this.updateButtonStates();
-      }
-
-      toggleMute() {
-        if (this.localStream) {
-          const audioTrack = this.localStream.getAudioTracks()[0];
-          if (audioTrack) {
-            audioTrack.enabled = !audioTrack.enabled;
-            this.isMuted = !audioTrack.enabled;
-            this.updateButtonStates();
-          }
-        }
-      }
-
-      toggleVideo() {
-        if (this.localStream) {
-          const videoTrack = this.localStream.getVideoTracks()[0];
-          if (videoTrack) {
-            videoTrack.enabled = !videoTrack.enabled;
-            this.isVideoOff = !videoTrack.enabled;
-            this.updateButtonStates();
-          }
-        }
-      }
-
-      updateButtonStates() {
-        this.muteBtn.textContent = this.isMuted ? '🔊 Включить звук' : '🔇 Выключить звук';
-        this.videoBtn.textContent = this.isVideoOff ? '📹 Включить видео' : '📹 Выключить видео';
-      }
-
-      sendMessage() {
-        const message = this.messageInput.value.trim();
-        if (!message || !this.roomId) return;
-
-        this.socket.emit('chat-message', {
-          roomId: this.roomId,
-          message: message
-        });
-
-        this.addMessage(this.username, message);
-        this.messageInput.value = '';
-      }
-
-      addMessage(username, message) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = username === this.username ? 'message own' : 'message';
-        
-        const header = document.createElement('div');
-        header.className = 'message-header';
-        header.textContent = username === 'system' ? 'Система' : username;
-        
-        const content = document.createElement('div');
-        content.textContent = message;
-        
-        messageDiv.appendChild(header);
-        messageDiv.appendChild(content);
-        
-        this.chatMessages.appendChild(messageDiv);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-      }
-    }
-
-    // Глобальные функции для кнопок
-    let messenger;
-
+    // Функция входа в приложение
     function enterApp() {
       console.log('enterApp вызвана');
-      const username = document.getElementById('usernameInput').value.trim();
-      console.log('Имя пользователя:', username);
       
-      if (!username) {
+      const name = usernameInput.value.trim();
+      console.log('Имя пользователя:', name);
+      
+      if (!name) {
         alert('Введите ваше имя!');
         return;
       }
 
       try {
-        messenger = new WebRTCMessenger();
-        messenger.username = username;
+        username = name;
         
         console.log('Скрываем welcome screen');
-        document.getElementById('welcomeScreen').style.display = 'none';
+        welcomeScreen.style.display = 'none';
         
         console.log('Показываем main app');
-        document.getElementById('mainApp').style.display = 'flex';
+        mainApp.classList.remove('hidden');
         
         console.log('Подключаемся к сокету');
-        messenger.connectSocket();
+        connectSocket();
         
         console.log('enterApp завершена успешно');
       } catch (error) {
@@ -678,42 +435,189 @@
       }
     }
 
-    function joinRoom() {
-      if (messenger) messenger.joinRoom();
-    }
-
-    function startCall() {
-      if (messenger) messenger.startCall();
-    }
-
-    function endCall() {
-      if (messenger) messenger.endCall();
-    }
-
-    function toggleMute() {
-      if (messenger) messenger.toggleMute();
-    }
-
-    function toggleVideo() {
-      if (messenger) messenger.toggleVideo();
-    }
-
-    function sendMessage() {
-      if (messenger) messenger.sendMessage();
-    }
-
-    // Автоматический фокус на поле ввода имени
-    document.addEventListener('DOMContentLoaded', () => {
-      const usernameInput = document.getElementById('usernameInput');
-      usernameInput.focus();
+    // Подключение к Socket.IO
+    function connectSocket() {
+      console.log('Подключаемся к Socket.IO');
       
-      // Обработчик Enter для поля ввода имени
-      usernameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          enterApp();
-        }
+      socket = io("/", { 
+        transports: ["websocket", "polling"],
+        timeout: 20000,
+        forceNew: true
       });
-    });
+
+      socket.on('connect', () => {
+        console.log('✅ Подключен к серверу');
+        status.textContent = '✅ Подключен к серверу';
+        status.className = 'status connected';
+        isConnected = true;
+      });
+
+      socket.on('disconnect', () => {
+        console.log('❌ Отключен от сервера');
+        status.textContent = '❌ Отключен от сервера';
+        status.className = 'status error';
+        isConnected = false;
+        resetCall();
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('Ошибка подключения:', error);
+        status.textContent = '❌ Ошибка подключения';
+        status.className = 'status error';
+      });
+
+      socket.on('user-joined', (data) => {
+        console.log('Пользователь присоединился:', data);
+        addMessage('system', `${data.username} присоединился к комнате`);
+      });
+
+      socket.on('user-left', (data) => {
+        console.log('Пользователь покинул:', data);
+        addMessage('system', `${data.username} покинул комнату`);
+        resetCall();
+      });
+
+      socket.on('chat-message', (message) => {
+        addMessage(message.username, message.message);
+      });
+    }
+
+    // Вход в комнату
+    function joinRoom() {
+      if (!isConnected) {
+        alert('Нет подключения к серверу');
+        return;
+      }
+
+      const room = roomInput.value.trim();
+      if (!room) {
+        alert('Введите название комнаты');
+        return;
+      }
+
+      roomId = room;
+      socket.emit('join-room', room, username);
+      status.textContent = `✅ В комнате: ${room}`;
+      status.className = 'status connected';
+      
+      messageInput.disabled = false;
+      sendBtn.disabled = false;
+      startBtn.disabled = false;
+    }
+
+    // Начать звонок
+    async function startCall() {
+      try {
+        console.log('Запрашиваем доступ к камере/микрофону');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        
+        localVideo.srcObject = localStream;
+        
+        startBtn.disabled = true;
+        endBtn.disabled = false;
+        muteBtn.disabled = false;
+        videoBtn.disabled = false;
+        
+        addMessage('system', 'Звонок начат');
+        console.log('Звонок начат успешно');
+      } catch (error) {
+        console.error('Ошибка доступа к камере/микрофону:', error);
+        alert('Не удалось получить доступ к камере/микрофону');
+      }
+    }
+
+    // Завершить звонок
+    function endCall() {
+      resetCall();
+      addMessage('system', 'Звонок завершен');
+    }
+
+    // Сброс звонка
+    function resetCall() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
+      remoteStream = null;
+
+      startBtn.disabled = false;
+      endBtn.disabled = true;
+      muteBtn.disabled = true;
+      videoBtn.disabled = true;
+      isMuted = false;
+      isVideoOff = false;
+
+      updateButtonStates();
+    }
+
+    // Переключить звук
+    function toggleMute() {
+      if (localStream) {
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (audioTrack) {
+          audioTrack.enabled = !audioTrack.enabled;
+          isMuted = !audioTrack.enabled;
+          updateButtonStates();
+        }
+      }
+    }
+
+    // Переключить видео
+    function toggleVideo() {
+      if (localStream) {
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = !videoTrack.enabled;
+          isVideoOff = !videoTrack.enabled;
+          updateButtonStates();
+        }
+      }
+    }
+
+    // Обновить состояние кнопок
+    function updateButtonStates() {
+      muteBtn.textContent = isMuted ? '🔊 Включить звук' : '🔇 Выключить звук';
+      videoBtn.textContent = isVideoOff ? '📹 Включить видео' : '📹 Выключить видео';
+    }
+
+    // Отправить сообщение
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message || !roomId) return;
+
+      socket.emit('chat-message', {
+        roomId: roomId,
+        message: message
+      });
+
+      addMessage(username, message);
+      messageInput.value = '';
+    }
+
+    // Добавить сообщение в чат
+    function addMessage(username, message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = username === this.username ? 'message own' : 'message';
+      
+      const header = document.createElement('div');
+      header.className = 'message-header';
+      header.textContent = username === 'system' ? 'Система' : username;
+      
+      const content = document.createElement('div');
+      content.textContent = message;
+      
+      messageDiv.appendChild(header);
+      messageDiv.appendChild(content);
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
   </script>
 </body>
 </html>
