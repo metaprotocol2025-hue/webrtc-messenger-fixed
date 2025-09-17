@@ -649,18 +649,33 @@
     let messenger;
 
     function enterApp() {
+      console.log('enterApp вызвана');
       const username = document.getElementById('usernameInput').value.trim();
+      console.log('Имя пользователя:', username);
+      
       if (!username) {
         alert('Введите ваше имя!');
         return;
       }
 
-      messenger = new WebRTCMessenger();
-      messenger.username = username;
-      document.getElementById('welcomeScreen').style.display = 'none';
-      document.getElementById('mainApp').style.display = 'flex';
-      
-      messenger.connectSocket();
+      try {
+        messenger = new WebRTCMessenger();
+        messenger.username = username;
+        
+        console.log('Скрываем welcome screen');
+        document.getElementById('welcomeScreen').style.display = 'none';
+        
+        console.log('Показываем main app');
+        document.getElementById('mainApp').style.display = 'flex';
+        
+        console.log('Подключаемся к сокету');
+        messenger.connectSocket();
+        
+        console.log('enterApp завершена успешно');
+      } catch (error) {
+        console.error('Ошибка в enterApp:', error);
+        alert('Ошибка при входе: ' + error.message);
+      }
     }
 
     function joinRoom() {

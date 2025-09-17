@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test WebRTC Messenger</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔒 Test WebRTC Messenger</h1>
+    <p>Введите ваше имя для входа</p>
+    <input type="text" id="usernameInput" placeholder="Ваше имя" value="АНТОН">
+    <button onclick="testEnter()">Войти в мессенджер</button>
+    <div class="status" id="status">Готов к тестированию</div>
+  </div>
+
+  <script>
+    function testEnter() {
+      console.log('Кнопка нажата!');
+      const username = document.getElementById('usernameInput').value.trim();
+      console.log('Имя:', username);
+      
+      if (!username) {
+        alert('Введите ваше имя!');
+        return;
+      }
+      
+      document.getElementById('status').textContent = `Привет, ${username}! Кнопка работает!`;
+      document.getElementById('status').style.background = '#d4edda';
+      document.getElementById('status').style.color = '#155724';
+      
+      // Через 2 секунды переходим к основному приложению
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+    }
+    
+    // Обработчик Enter
+    document.getElementById('usernameInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        testEnter();
+      }
+    });
+    
+    console.log('Скрипт загружен');
+  </script>
+</body>
+</html>
