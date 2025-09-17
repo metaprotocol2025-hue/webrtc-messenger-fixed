@@ -19,6 +19,15 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// API endpoint
+app.post("/api/create-user", (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: "Имя обязательно" });
+  }
+  res.json({ success: true, user: { name } });
+});
+
 // Serve index.html for root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -27,15 +36,6 @@ app.get('/', (req, res) => {
 // Serve index.html for all routes (SPA)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// API endpoint
-app.post("/api/create-user", (req, res) => {
-  const { name } = req.body;
-  if (!name) {
-    return res.status(400).json({ error: "Имя обязательно" });
-  }
-  res.json({ success: true, user: { name } });
 });
 
 // Socket.IO
@@ -57,7 +57,17 @@ io.on("connection", (socket) => {
   });
 });
 
+// Error handling
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // Start server
 server.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
+  console.log(`📡 WebRTC Messenger готов: http://localhost:${PORT}`);
 });
