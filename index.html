@@ -373,19 +373,6 @@
         });
       }
 
-      enterApp() {
-        const username = this.usernameInput.value.trim();
-        if (!username) {
-          alert('Введите ваше имя!');
-          return;
-        }
-
-        this.username = username;
-        this.welcomeScreen.style.display = 'none';
-        this.mainApp.style.display = 'flex';
-        
-        this.connectSocket();
-      }
 
       connectSocket() {
         this.socket = io("/", { 
@@ -662,7 +649,18 @@
     let messenger;
 
     function enterApp() {
+      const username = document.getElementById('usernameInput').value.trim();
+      if (!username) {
+        alert('Введите ваше имя!');
+        return;
+      }
+
       messenger = new WebRTCMessenger();
+      messenger.username = username;
+      document.getElementById('welcomeScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'flex';
+      
+      messenger.connectSocket();
     }
 
     function joinRoom() {
@@ -691,7 +689,15 @@
 
     // Автоматический фокус на поле ввода имени
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('usernameInput').focus();
+      const usernameInput = document.getElementById('usernameInput');
+      usernameInput.focus();
+      
+      // Обработчик Enter для поля ввода имени
+      usernameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          enterApp();
+        }
+      });
     });
   </script>
 </body>
