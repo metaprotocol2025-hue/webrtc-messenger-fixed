@@ -497,6 +497,27 @@
             answer: answer
           });
           console.log('Answer отправлен');
+          
+          // Если у нас еще нет локального потока, запрашиваем его
+          if (!localStream) {
+            console.log('Запрашиваем локальный поток для ответа');
+            try {
+              localStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: { echoCancellation: true, noiseSuppression: true }
+              });
+              localVideo.srcObject = localStream;
+              
+              // Добавляем локальный поток в peer connection
+              localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+              });
+              
+              console.log('Локальный поток добавлен в peer connection');
+            } catch (error) {
+              console.error('Ошибка получения локального потока:', error);
+            }
+          }
         } catch (error) {
           console.error('Ошибка обработки offer:', error);
         }
@@ -506,6 +527,27 @@
         console.log('Получен answer от', data.senderName);
         try {
           await peerConnection.setRemoteDescription(data.answer);
+          
+          // Если у нас еще нет локального потока, запрашиваем его
+          if (!localStream) {
+            console.log('Запрашиваем локальный поток для answer');
+            try {
+              localStream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: { echoCancellation: true, noiseSuppression: true }
+              });
+              localVideo.srcObject = localStream;
+              
+              // Добавляем локальный поток в peer connection
+              localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+              });
+              
+              console.log('Локальный поток добавлен в peer connection');
+            } catch (error) {
+              console.error('Ошибка получения локального потока:', error);
+            }
+          }
         } catch (error) {
           console.error('Ошибка обработки answer:', error);
         }
@@ -685,6 +727,20 @@
         remoteStream = event.streams[0];
         remoteVideo.srcObject = remoteStream;
         addMessage('system', 'Видео соединение установлено!');
+        
+        // Проверяем состояние видео через 2 секунды
+        setTimeout(() => {
+          if (remoteVideo.videoWidth === 0 || remoteVideo.videoHeight === 0) {
+            console.log('Удаленное видео не отображается, пытаемся переподключиться');
+            addMessage('system', 'Проблема с видео, переподключаемся...');
+            // Попробуем создать новое соединение
+            setTimeout(() => {
+              if (localStream) {
+                createOffer();
+              }
+            }, 1000);
+          }
+        }, 2000);
       };
 
       // Добавляем локальный поток
