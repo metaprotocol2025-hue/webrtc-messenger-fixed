@@ -84,11 +84,20 @@ io.on("connection", (socket) => {
   // Handle WebRTC signaling
   socket.on('offer', (data) => {
     console.log('Offer от', socket.id, 'к', data.target);
-    socket.to(data.target).emit('offer', {
-      offer: data.offer,
-      sender: socket.id,
-      senderName: socket.username
-    });
+    if (data.target === 'all') {
+      // Отправляем всем в комнате кроме отправителя
+      socket.to(socket.roomId).emit('offer', {
+        offer: data.offer,
+        sender: socket.id,
+        senderName: socket.username
+      });
+    } else {
+      socket.to(data.target).emit('offer', {
+        offer: data.offer,
+        sender: socket.id,
+        senderName: socket.username
+      });
+    }
   });
 
   socket.on('answer', (data) => {
@@ -102,11 +111,20 @@ io.on("connection", (socket) => {
 
   socket.on('ice-candidate', (data) => {
     console.log('ICE candidate от', socket.id, 'к', data.target);
-    socket.to(data.target).emit('ice-candidate', {
-      candidate: data.candidate,
-      sender: socket.id,
-      senderName: socket.username
-    });
+    if (data.target === 'all') {
+      // Отправляем всем в комнате кроме отправителя
+      socket.to(socket.roomId).emit('ice-candidate', {
+        candidate: data.candidate,
+        sender: socket.id,
+        senderName: socket.username
+      });
+    } else {
+      socket.to(data.target).emit('ice-candidate', {
+        candidate: data.candidate,
+        sender: socket.id,
+        senderName: socket.username
+      });
+    }
   });
 
   // Handle chat messages

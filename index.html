@@ -480,6 +480,47 @@
       socket.on('chat-message', (message) => {
         addMessage(message.username, message.message);
       });
+
+      // WebRTC сигналинг
+      socket.on('offer', async (data) => {
+        console.log('Получен offer от', data.senderName);
+        try {
+          if (!peerConnection) {
+            setupPeerConnection();
+          }
+          await peerConnection.setRemoteDescription(data.offer);
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          
+          socket.emit('answer', {
+            target: data.sender,
+            answer: answer
+          });
+          console.log('Answer отправлен');
+        } catch (error) {
+          console.error('Ошибка обработки offer:', error);
+        }
+      });
+
+      socket.on('answer', async (data) => {
+        console.log('Получен answer от', data.senderName);
+        try {
+          await peerConnection.setRemoteDescription(data.answer);
+        } catch (error) {
+          console.error('Ошибка обработки answer:', error);
+        }
+      });
+
+      socket.on('ice-candidate', async (data) => {
+        console.log('Получен ICE candidate от', data.senderName);
+        try {
+          if (peerConnection) {
+            await peerConnection.addIceCandidate(data.candidate);
+          }
+        } catch (error) {
+          console.error('Ошибка обработки ICE candidate:', error);
+        }
+      });
     }
 
     // Вход в комнату
@@ -516,6 +557,9 @@
         
         localVideo.srcObject = localStream;
         
+        // Создаем peer connection
+        setupPeerConnection();
+        
         startBtn.disabled = true;
         endBtn.disabled = false;
         muteBtn.disabled = false;
@@ -526,6 +570,65 @@
       } catch (error) {
         console.error('Ошибка доступа к камере/микрофону:', error);
         alert('Не удалось получить доступ к камере/микрофону');
+      }
+    }
+
+    // Настройка WebRTC соединения
+    function setupPeerConnection() {
+      const configuration = {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      };
+
+      peerConnection = new RTCPeerConnection(configuration);
+
+      // Обработка ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('Отправляем ICE candidate');
+          socket.emit('ice-candidate', {
+            target: 'all', // Отправляем всем в комнате
+            candidate: event.candidate
+          });
+        }
+      };
+
+      // Обработка удаленного потока
+      peerConnection.ontrack = (event) => {
+        console.log('Получен удаленный поток');
+        remoteStream = event.streams[0];
+        remoteVideo.srcObject = remoteStream;
+        addMessage('system', 'Видео соединение установлено!');
+      };
+
+      // Добавляем локальный поток
+      if (localStream) {
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+      }
+
+      // Создаем offer
+      createOffer();
+    }
+
+    // Создать offer
+    async function createOffer() {
+      try {
+        console.log('Создаем offer');
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        
+        socket.emit('offer', {
+          target: 'all',
+          offer: offer
+        });
+        console.log('Offer отправлен');
+      } catch (error) {
+        console.error('Ошибка создания offer:', error);
       }
     }
 
