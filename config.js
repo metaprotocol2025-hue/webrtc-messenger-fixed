@@ -13,11 +13,18 @@ export const rtcConfiguration = {
     // Metered.ca TURN серверы (бесплатные для тестов)
     {
       urls: [
-        "turn:openrelay.metered.ca:80",
-        "turn:openrelay.metered.ca:443"
+        "turn:openrelay.metered.ca:80?transport=udp",
+        "turn:openrelay.metered.ca:443?transport=tcp"
       ],
       username: "openrelayproject",
       credential: "openrelayproject"
+    },
+    
+    // Viagenie TURN сервер (дополнительный бесплатный)
+    {
+      urls: "turn:numb.viagenie.ca",
+      username: "webrtc@live.com",
+      credential: "muazkh"
     },
     
     // Пример для будущего coturn сервера (раскомментируйте и настройте):
