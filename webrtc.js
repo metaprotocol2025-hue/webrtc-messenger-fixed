@@ -26,8 +26,19 @@ class WebRTCManager {
   }
 
   init() {
+    this.setupVideoElements();
     this.setupSocket();
     this.setupEventListeners();
+  }
+
+  setupVideoElements() {
+    // Настройка для мобильных устройств
+    this.localVideo.autoplay = true;
+    this.localVideo.playsInline = true;
+    this.localVideo.muted = true;
+    
+    this.remoteVideo.autoplay = true;
+    this.remoteVideo.playsInline = true;
   }
 
   setupSocket() {
@@ -80,15 +91,31 @@ class WebRTCManager {
     this.currentName = name;
     
     try {
+      // Оптимизированные настройки для мобильных устройств
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
-        audio: { echoCancellation: true, noiseSuppression: true }
+        video: { 
+          width: { ideal: 640, max: 1280 },
+          height: { ideal: 480, max: 720 },
+          frameRate: { ideal: 30, max: 60 }
+        },
+        audio: { 
+          echoCancellation: true, 
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
+      
       this.localVideo.srcObject = this.localStream;
+      
+      // Принудительное воспроизведение для мобильных
+      this.localVideo.play().catch(() => {
+        console.log('Автовоспроизведение локального видео заблокировано');
+      });
+      
       this.addMessage('system', 'Камера подключена');
     } catch (error) {
       console.error('Ошибка доступа к камере:', error);
-      alert('Ошибка доступа к камере');
+      alert('Ошибка доступа к камере. Проверьте разрешения.');
       return;
     }
 
@@ -103,11 +130,14 @@ class WebRTCManager {
   async startCall() {
     if (!this.currentRoom || this.isInCall) return;
 
-    if (!this.peerConnection) {
-      await this.createPeerConnection();
+    // Закрываем старое соединение если есть
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection = null;
     }
 
     try {
+      await this.createPeerConnection();
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
@@ -148,22 +178,25 @@ class WebRTCManager {
     const config = {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
         {
-          urls: "turn:relay.metered.ca:80",
-          username: "openai",
-          credential: "openai"
+          urls: "turn:global.turn.twilio.com:3478?transport=udp",
+          username: "TWILIO_USERNAME",
+          credential: "TWILIO_PASSWORD"
         },
         {
-          urls: "turn:relay.metered.ca:443",
-          username: "openai",
-          credential: "openai"
+          urls: "turn:global.turn.twilio.com:3478?transport=tcp",
+          username: "TWILIO_USERNAME",
+          credential: "TWILIO_PASSWORD"
         },
         {
-          urls: "turns:relay.metered.ca:443",
-          username: "openai",
-          credential: "openai"
+          urls: "turns:global.turn.twilio.com:443?transport=tcp",
+          username: "TWILIO_USERNAME",
+          credential: "TWILIO_PASSWORD"
         }
-      ]
+      ],
+      iceCandidatePoolSize: 10
     };
 
     this.peerConnection = new RTCPeerConnection(config);
@@ -188,8 +221,15 @@ class WebRTCManager {
 
     // Обработка удаленного потока
     this.peerConnection.ontrack = (event) => {
+      console.log('✅ Получен удаленный поток!');
       this.remoteStream = event.streams[0];
       this.remoteVideo.srcObject = this.remoteStream;
+      
+      // Принудительное воспроизведение удаленного видео
+      this.remoteVideo.play().catch(() => {
+        console.log('Автовоспроизведение удаленного видео заблокировано');
+      });
+      
       this.addMessage('system', 'Видео соединение установлено!');
     };
 
@@ -200,15 +240,33 @@ class WebRTCManager {
         this.addMessage('system', 'Соединение установлено!');
       } else if (this.peerConnection.connectionState === 'failed') {
         this.addMessage('system', 'Ошибка соединения');
+        // Попытка переподключения
+        setTimeout(() => {
+          if (this.isInCall) {
+            this.startCall();
+          }
+        }, 2000);
+      }
+    };
+
+    // Обработка ICE соединения
+    this.peerConnection.oniceconnectionstatechange = () => {
+      console.log('ICE состояние:', this.peerConnection.iceConnectionState);
+      if (this.peerConnection.iceConnectionState === 'failed') {
+        this.addMessage('system', 'ICE соединение не удалось');
       }
     };
   }
 
   async handleOffer(data) {
     try {
-      if (!this.peerConnection) {
-        await this.createPeerConnection();
+      // Закрываем старое соединение если есть
+      if (this.peerConnection) {
+        this.peerConnection.close();
+        this.peerConnection = null;
       }
+
+      await this.createPeerConnection();
 
       if (!this.peerConnection.currentRemoteDescription) {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
