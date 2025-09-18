@@ -207,13 +207,25 @@ pkey=/path/to/private.key
 
 ## 🔄 Переключение TURN-серверов
 
-### В config.js:
+### В config.js (ES6 модули):
 ```javascript
-// Раскомментируйте нужную конфигурацию
-window.ICE_CONFIG = ICE_CONFIG;        // Metered.ca
-// window.ICE_CONFIG = TWILIO_CONFIG;  // Twilio
-// window.ICE_CONFIG = XIRSYS_CONFIG;  // Xirsys
-// window.ICE_CONFIG = COTURN_CONFIG;  // Собственный coturn
+// Используйте нужную конфигурацию
+import { rtcConfiguration } from './config.js';        // Metered.ca (по умолчанию)
+// import { twilioConfig } from './config.js';         // Twilio
+// import { xirsysConfig } from './config.js';         // Xirsys
+// import { coturnConfig } from './config.js';         // Собственный coturn
+
+const ICE_CONFIG = rtcConfiguration;
+```
+
+### В webrtc.js:
+```javascript
+// Импорт конфигурации
+import { rtcConfiguration } from './config.js';
+const ICE_CONFIG = rtcConfiguration;
+
+// Создание соединения
+const pc = new RTCPeerConnection(ICE_CONFIG);
 ```
 
 ### Динамическое переключение:

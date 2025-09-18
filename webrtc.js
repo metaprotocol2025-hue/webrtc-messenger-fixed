@@ -1,3 +1,6 @@
+// Импорт конфигурации ICE серверов
+import { rtcConfiguration } from './config.js';
+
 let localStream;
 let remoteStream;
 let peerConnection;
@@ -8,23 +11,8 @@ let currentName;
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 
-// Конфигурация ICE серверов загружается из config.js
-// Если config.js не загружен, используем fallback конфигурацию
-const ICE_CONFIG = window.ICE_CONFIG || {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    }
-  ],
-  iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
-};
+// Используем конфигурацию из config.js
+const ICE_CONFIG = rtcConfiguration;
 
 // Автоматическое определение комнаты из URL
 function getRoomFromURL() {
@@ -258,6 +246,7 @@ async function createPeerConnection() {
     }
   };
 
+  // Улучшенное логирование состояний соединения
   peerConnection.oniceconnectionstatechange = () => {
     const state = peerConnection.iceConnectionState;
     console.log("🧊 ICE connection state:", state);
@@ -267,19 +256,43 @@ async function createPeerConnection() {
       log("🎉 Соединение установлено!");
     } else if (state === 'failed') {
       log("❌ Соединение не удалось установить");
+    } else if (state === 'disconnected') {
+      log("⚠️ Соединение разорвано");
+    } else if (state === 'checking') {
+      log("🔍 Проверка соединения...");
     }
   };
 
   peerConnection.onconnectionstatechange = () => {
     const state = peerConnection.connectionState;
-    console.log("🔗 Connection state:", state);
-    log("Connection state: " + state);
+    console.log("🔗 PeerConnection state:", state);
+    log("PeerConnection state: " + state);
+    
+    if (state === 'connected') {
+      log("✅ PeerConnection установлен");
+    } else if (state === 'failed') {
+      log("❌ PeerConnection не удался");
+    } else if (state === 'disconnected') {
+      log("⚠️ PeerConnection разорван");
+    }
   };
 
   peerConnection.onsignalingstatechange = () => {
     const state = peerConnection.signalingState;
     console.log("📞 Signaling state:", state);
     log("Signaling state: " + state);
+    
+    if (state === 'stable') {
+      log("✅ Сигналинг стабилен");
+    } else if (state === 'have-local-offer') {
+      log("📤 Отправлен offer");
+    } else if (state === 'have-remote-offer') {
+      log("📥 Получен offer");
+    } else if (state === 'have-local-pranswer') {
+      log("📤 Отправлен pranswer");
+    } else if (state === 'have-remote-pranswer') {
+      log("📥 Получен pranswer");
+    }
   };
 }
 
@@ -358,6 +371,24 @@ async function handleAnswer({ answer }) {
     } else {
       console.warn("⚠️ Неожиданное состояние signaling:", peerConnection.signalingState);
       log("⚠️ Неожиданное состояние signaling: " + peerConnection.signalingState);
+      
+      // Отложенная установка answer через небольшую задержку
+      log("⏳ Попытка отложенной установки answer...");
+      setTimeout(async () => {
+        try {
+          if (peerConnection.signalingState === 'have-local-offer') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            console.log("✅ Answer применён (отложенно)");
+            log("✅ Answer применён (отложенно)");
+          } else {
+            console.error("❌ Состояние всё ещё неправильное:", peerConnection.signalingState);
+            log("❌ Состояние всё ещё неправильное: " + peerConnection.signalingState);
+          }
+        } catch (err) {
+          console.error("❌ Ошибка отложенной установки answer:", err);
+          log("❌ Ошибка отложенной установки answer: " + err.message);
+        }
+      }, 100);
     }
   } catch (err) {
     console.error("❌ Ошибка setRemoteDescription(answer):", err);

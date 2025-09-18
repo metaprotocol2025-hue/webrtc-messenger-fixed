@@ -1,7 +1,7 @@
 // Конфигурация ICE серверов для WebRTC
 // Этот файл можно легко изменить для использования разных TURN серверов
 
-const ICE_CONFIG = {
+export const rtcConfiguration = {
   iceServers: [
     // Google STUN серверы (бесплатные)
     { urls: "stun:stun.l.google.com:19302" },
@@ -12,36 +12,30 @@ const ICE_CONFIG = {
     
     // Metered.ca TURN серверы (бесплатные для тестов)
     {
-      urls: "turn:openrelay.metered.ca:80",
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443"
+      ],
       username: "openrelayproject",
       credential: "openrelayproject"
     },
-    {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    },
-    {
-      urls: "turn:openrelay.metered.ca:80?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    }
+    
+    // Пример для будущего coturn сервера (раскомментируйте и настройте):
+    // {
+    //   urls: "turn:my-vps-ip:3478",
+    //   username: "webrtc",
+    //   credential: "strongpassword"
+    // }
   ],
   iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
+  bundlePolicy: "balanced",
+  iceTransportPolicy: "all"
 };
 
 // Примеры конфигураций для других TURN серверов:
 
 // Twilio TURN (платный, но надёжный)
-const TWILIO_CONFIG = {
+export const twilioConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     {
@@ -56,13 +50,12 @@ const TWILIO_CONFIG = {
     }
   ],
   iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
+  bundlePolicy: "balanced",
+  iceTransportPolicy: "all"
 };
 
 // Xirsys TURN (платный)
-const XIRSYS_CONFIG = {
+export const xirsysConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     {
@@ -72,13 +65,12 @@ const XIRSYS_CONFIG = {
     }
   ],
   iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
+  bundlePolicy: "balanced",
+  iceTransportPolicy: "all"
 };
 
 // Собственный coturn сервер
-const COTURN_CONFIG = {
+export const coturnConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     {
@@ -93,16 +85,11 @@ const COTURN_CONFIG = {
     }
   ],
   iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
+  bundlePolicy: "balanced",
+  iceTransportPolicy: "all"
 };
 
-// Экспортируем активную конфигурацию
-// Измените эту строку для использования другого TURN сервера
-window.ICE_CONFIG = ICE_CONFIG;
-
-// Для использования другого сервера, раскомментируйте нужную строку:
-// window.ICE_CONFIG = TWILIO_CONFIG;
-// window.ICE_CONFIG = XIRSYS_CONFIG;
-// window.ICE_CONFIG = COTURN_CONFIG;
+// Fallback для старых браузеров без поддержки ES6 модулей
+if (typeof window !== 'undefined') {
+  window.ICE_CONFIG = rtcConfiguration;
+}
