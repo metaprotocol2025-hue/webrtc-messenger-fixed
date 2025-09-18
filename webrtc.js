@@ -167,9 +167,12 @@ async function createPeerConnection() {
   remoteVideo.srcObject = remoteStream;
 
   // Добавляем локальные треки
-  localStream.getTracks().forEach(track => {
-    peerConnection.addTrack(track, localStream);
-  });
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+      console.log("▶️ Добавлен локальный трек:", track.kind);
+    });
+  }
 
   // Пришёл удалённый трек
   peerConnection.ontrack = (event) => {
@@ -198,6 +201,15 @@ async function createPeerConnection() {
 // Начало звонка
 async function startCall() {
   await createPeerConnection();
+  
+  // Убеждаемся, что локальные треки добавлены
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+      console.log("▶️ (StartCall) Добавлен локальный трек:", track.kind);
+    });
+  }
+  
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
   socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
@@ -208,6 +220,15 @@ async function startCall() {
 async function handleOffer({ offer, senderName }) {
   log("📥 Получен offer от " + senderName);
   await createPeerConnection();
+  
+  // Убеждаемся, что локальные треки добавлены
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+      console.log("▶️ (Offer) Добавлен локальный трек:", track.kind);
+    });
+  }
+  
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
@@ -218,6 +239,15 @@ async function handleOffer({ offer, senderName }) {
 // Обработка answer
 async function handleAnswer({ answer }) {
   log("📥 Получен answer");
+  
+  // Убеждаемся, что локальные треки добавлены
+  if (localStream && peerConnection.getSenders().length === 0) {
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+      console.log("▶️ (Answer) Добавлен локальный трек:", track.kind);
+    });
+  }
+  
   await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
