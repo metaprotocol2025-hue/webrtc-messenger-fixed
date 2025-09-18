@@ -177,18 +177,63 @@ class WebRTCManager {
   async createPeerConnection() {
     const config = {
       iceServers: [
+        // Google STUN серверы
         { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
+        
+        // Бесплатные TURN серверы Metered.ca
         {
-          urls: "turn:global.turn.twilio.com:3478?transport=udp",
-          username: "TWILIO_USERNAME",
-          credential: "TWILIO_PASSWORD"
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject"
         },
         {
-          urls: "turn:global.turn.twilio.com:3478?transport=tcp",
-          username: "TWILIO_USERNAME",
-          credential: "TWILIO_PASSWORD"
-        }
-      ]
+          urls: "turn:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443?transport=tcp",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        
+        // Дополнительные TURN серверы
+        {
+          urls: "turn:relay.metered.ca:80",
+          username: "87e4a0a0b0b0b0b0",
+          credential: "87e4a0a0b0b0b0b0"
+        },
+        {
+          urls: "turn:relay.metered.ca:443",
+          username: "87e4a0a0b0b0b0b0",
+          credential: "87e4a0a0b0b0b0b0"
+        },
+        {
+          urls: "turn:relay.metered.ca:443?transport=tcp",
+          username: "87e4a0a0b0b0b0b0",
+          credential: "87e4a0a0b0b0b0b0"
+        },
+        
+        // Дополнительные STUN серверы
+        { urls: "stun:stun.ekiga.net" },
+        { urls: "stun:stun.ideasip.com" },
+        { urls: "stun:stun.schlund.de" },
+        { urls: "stun:stun.stunprotocol.org:3478" },
+        { urls: "stun:stun.voiparound.com" },
+        { urls: "stun:stun.voipbuster.com" },
+        { urls: "stun:stun.voipstunt.com" },
+        { urls: "stun:stun.counterpath.com" },
+        { urls: "stun:stun.1und1.de" },
+        { urls: "stun:stun.gmx.net" }
+      ],
+      iceCandidatePoolSize: 10,
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require'
     };
 
     this.peerConnection = new RTCPeerConnection(config);
@@ -203,11 +248,15 @@ class WebRTCManager {
     // Обработка ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('ICE candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address);
         this.socket.emit('ice-candidate', {
           roomId: this.currentRoom,
           candidate: event.candidate,
           senderName: this.currentName
         });
+      } else {
+        console.log('ICE gathering завершен');
+        this.addMessage('system', 'ICE gathering завершен');
       }
     };
 
@@ -244,8 +293,21 @@ class WebRTCManager {
     // Обработка ICE соединения
     this.peerConnection.oniceconnectionstatechange = () => {
       console.log('ICE состояние:', this.peerConnection.iceConnectionState);
-      if (this.peerConnection.iceConnectionState === 'failed') {
-        this.addMessage('system', 'ICE соединение не удалось');
+      this.addMessage('system', `ICE: ${this.peerConnection.iceConnectionState}`);
+      
+      if (this.peerConnection.iceConnectionState === 'connected') {
+        this.addMessage('system', '✅ ICE соединение установлено!');
+      } else if (this.peerConnection.iceConnectionState === 'failed') {
+        this.addMessage('system', '❌ ICE соединение не удалось');
+        // Попытка переподключения
+        setTimeout(() => {
+          if (this.isInCall) {
+            this.addMessage('system', '🔄 Попытка переподключения...');
+            this.startCall();
+          }
+        }, 3000);
+      } else if (this.peerConnection.iceConnectionState === 'disconnected') {
+        this.addMessage('system', '⚠️ ICE соединение разорвано');
       }
     };
   }
