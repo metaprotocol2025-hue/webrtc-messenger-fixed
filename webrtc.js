@@ -275,14 +275,11 @@ async function handleOffer({ offer, senderName }) {
 async function handleAnswer({ answer }) {
   log("📥 Получен answer");
   
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-  
-  // Жёстко добавляем свои треки после setRemoteDescription
-  if (localStream && peerConnection.getSenders().length === 0) {
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-      console.log("▶️ (Answer) Добавлен локальный трек:", track.kind);
-    });
+  try {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    console.log("✅ Answer применён");
+  } catch (err) {
+    console.error("❌ Ошибка setRemoteDescription(answer):", err);
   }
 }
 
