@@ -262,6 +262,48 @@ class WebRTCManager {
       this.addMessage('system', '🔥 Режим отладки TURN: только TURN серверы');
     }
 
+    // Логируем все ICE кандидаты
+    this.peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        console.log("📡 Новый ICE кандидат:", event.candidate.candidate);
+
+        this.socket.emit("ice-candidate", {
+          roomId: this.currentRoom,
+          candidate: event.candidate,
+          senderName: this.currentName
+        });
+      } else {
+        console.log("✅ Сбор ICE кандидатов завершён");
+      }
+    };
+
+    // Логируем изменения состояния ICE
+    this.peerConnection.oniceconnectionstatechange = () => {
+      console.log("🌐 ICE состояние:", this.peerConnection.iceConnectionState);
+      this.addMessage("system", `ICE: ${this.peerConnection.iceConnectionState}`);
+    };
+
+    // Логируем выбранного кандидата (путь соединения)
+    this.peerConnection.onconnectionstatechange = () => {
+      console.log("🔄 Состояние соединения:", this.peerConnection.connectionState);
+      if (this.peerConnection.connectionState === "connected") {
+        this.addMessage("system", "✅ Соединение установлено!");
+      }
+    };
+
+    // Лог: какой кандидат выбран (host / srflx / relay)
+    this.peerConnection.addEventListener("icecandidate", (event) => {
+      if (event.candidate) {
+        const type = event.candidate.type;
+        console.log(`➡️ Кандидат: ${event.candidate.candidate}`);
+        console.log(`📌 Тип кандидата: ${type}`);
+      }
+    });
+
+    this.peerConnection.addEventListener("iceconnectionstatechange", () => {
+      console.log("📡 Текущее ICE состояние:", this.peerConnection.iceConnectionState);
+    });
+
     // Добавляем локальный поток один раз
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => {
@@ -269,32 +311,7 @@ class WebRTCManager {
       });
     }
 
-    // Обработка ICE candidates
-    this.peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        const candidate = event.candidate;
-        console.log(`ICE candidate: ${candidate.type} ${candidate.protocol} ${candidate.address}:${candidate.port}`);
-        
-        // Проверяем наличие TURN (relay) кандидатов
-        if (candidate.type === 'relay') {
-          console.log('✅ TURN сервер работает! Relay candidate получен');
-          this.addMessage('system', '✅ TURN сервер подключен');
-        } else if (candidate.type === 'srflx') {
-          console.log('📡 STUN сервер работает, но TURN не найден');
-        } else if (candidate.type === 'host') {
-          console.log('🏠 Локальный кандидат');
-        }
-        
-        this.socket.emit('ice-candidate', {
-          roomId: this.currentRoom,
-          candidate: event.candidate,
-          senderName: this.currentName
-        });
-      } else {
-        console.log('ICE gathering завершен');
-        this.addMessage('system', 'ICE gathering завершен');
-      }
-    };
+    // ICE candidates обрабатываются выше
 
     // Обработка удаленного потока
     this.peerConnection.ontrack = (event) => {
@@ -311,42 +328,7 @@ class WebRTCManager {
       this.addMessage('system', 'Видео соединение установлено!');
     };
 
-    // Обработка изменения состояния
-    this.peerConnection.onconnectionstatechange = () => {
-      console.log('Состояние соединения:', this.peerConnection.connectionState);
-      if (this.peerConnection.connectionState === 'connected') {
-        this.addMessage('system', 'Соединение установлено!');
-      } else if (this.peerConnection.connectionState === 'failed') {
-        this.addMessage('system', 'Ошибка соединения');
-        // Попытка переподключения
-        setTimeout(() => {
-          if (this.isInCall) {
-            this.startCall();
-          }
-        }, 2000);
-      }
-    };
-
-    // Обработка ICE соединения
-    this.peerConnection.oniceconnectionstatechange = () => {
-      console.log('ICE состояние:', this.peerConnection.iceConnectionState);
-      this.addMessage('system', `ICE: ${this.peerConnection.iceConnectionState}`);
-      
-      if (this.peerConnection.iceConnectionState === 'connected') {
-        this.addMessage('system', '✅ ICE соединение установлено!');
-      } else if (this.peerConnection.iceConnectionState === 'failed') {
-        this.addMessage('system', '❌ ICE соединение не удалось');
-        // Попытка переподключения
-        setTimeout(() => {
-          if (this.isInCall) {
-            this.addMessage('system', '🔄 Попытка переподключения...');
-            this.startCall();
-          }
-        }, 3000);
-      } else if (this.peerConnection.iceConnectionState === 'disconnected') {
-        this.addMessage('system', '⚠️ ICE соединение разорвано');
-      }
-    };
+    // Состояние соединения обрабатывается выше
   }
 
   async handleOffer(data) {
