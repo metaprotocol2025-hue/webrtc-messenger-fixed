@@ -485,18 +485,30 @@
       socket.on('offer', async (data) => {
         console.log('Получен offer от', data.senderName);
         try {
+          // Если соединение уже существует и в неправильном состоянии, закрываем его
+          if (peerConnection && peerConnection.signalingState !== 'stable') {
+            console.log('Закрываем существующее соединение');
+            peerConnection.close();
+            peerConnection = null;
+          }
+          
           if (!peerConnection) {
             setupPeerConnection();
           }
-          await peerConnection.setRemoteDescription(data.offer);
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
           
-          socket.emit('answer', {
-            target: data.sender,
-            answer: answer
-          });
-          console.log('Answer отправлен');
+          if (peerConnection.signalingState === 'stable') {
+            await peerConnection.setRemoteDescription(data.offer);
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            
+            socket.emit('answer', {
+              target: data.sender,
+              answer: answer
+            });
+            console.log('Answer отправлен');
+          } else {
+            console.log('⚠️ Игнорируем offer - неправильное состояние:', peerConnection.signalingState);
+          }
           
           // Если у нас еще нет локального потока, запрашиваем его
           if (!localStream) {
@@ -526,7 +538,13 @@
       socket.on('answer', async (data) => {
         console.log('Получен answer от', data.senderName);
         try {
-          await peerConnection.setRemoteDescription(data.answer);
+          if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
+            await peerConnection.setRemoteDescription(data.answer);
+            console.log('✅ Answer установлен успешно');
+          } else {
+            console.log('⚠️ Игнорируем answer - неправильное состояние:', peerConnection?.signalingState);
+            return;
+          }
           
           // Если у нас еще нет локального потока, запрашиваем его
           if (!localStream) {
@@ -757,6 +775,11 @@
     // Создать offer
     async function createOffer() {
       try {
+        if (!peerConnection || peerConnection.signalingState !== 'stable') {
+          console.log('⚠️ Соединение не готово для offer');
+          return;
+        }
+        
         console.log('Создаем offer');
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
