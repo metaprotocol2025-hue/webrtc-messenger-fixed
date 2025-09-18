@@ -30,28 +30,30 @@
     #videos {
       display: flex;
       justify-content: center;
+      align-items: center;
       gap: 20px;
       flex: 2;
+      min-height: 0;
     }
 
     /* Видео участника */
     #remoteVideo {
-      width: 70%;
-      height: auto;
-      max-height: 80vh;
+      width: 60%;
+      height: 70vh;
       background: black;
       border-radius: 8px;
       object-fit: cover;
+      border: 2px solid #fff;
     }
 
     /* Видео своё */
     #localVideo {
-      width: 30%;
-      height: auto;
-      max-height: 40vh;
+      width: 35%;
+      height: 50vh;
       background: black;
       border-radius: 8px;
       object-fit: cover;
+      border: 2px solid #fff;
     }
 
     /* Чат */
@@ -60,8 +62,9 @@
       overflow-y: auto;
       background: #2c1a4d;
       color: white;
-      padding: 5px;
+      padding: 10px;
       min-width: 300px;
+      max-width: 400px;
     }
 
     .message {
@@ -118,47 +121,75 @@
     @media (max-width: 768px) {
       #app {
         flex-direction: column;
+        padding: 5px;
+        gap: 5px;
       }
 
       #videos {
-        flex-direction: column;
-        gap: 10px;
+        position: relative;
+        flex: 1;
+        min-height: 60vh;
       }
 
       #remoteVideo {
         width: 100%;
-        max-height: 60vh;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
       }
 
       #localVideo {
-        width: 100%;
-        max-height: 30vh;
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        width: 30%;
+        height: 25%;
+        z-index: 2;
+        border: 3px solid #fff;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
       }
 
       #chat {
-        flex: 0 0 150px;
+        flex: 0 0 200px;
         min-width: 0;
+        max-width: none;
       }
 
       #controls {
         flex-direction: column;
         gap: 5px;
+        padding: 5px;
       }
 
       #controls input, #controls button {
         width: 100%;
         margin: 2px 0;
+        padding: 10px;
+        font-size: 16px;
       }
     }
 
     @media (max-width: 480px) {
+      #videos {
+        min-height: 50vh;
+      }
+
+      #localVideo {
+        width: 25%;
+        height: 20%;
+        bottom: 5px;
+        right: 5px;
+      }
+
       #controls input, #controls button { 
-        padding: 6px 8px; 
-        font-size: 12px; 
+        padding: 8px 10px; 
+        font-size: 14px; 
       }
       
       #chat {
-        flex: 0 0 120px;
+        flex: 0 0 150px;
       }
     }
     /* ⚠️ Баннер для Telegram */
