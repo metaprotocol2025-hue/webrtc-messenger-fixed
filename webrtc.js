@@ -11,10 +11,16 @@ const remoteVideo = document.getElementById("remoteVideo");
 async function init() {
   socket = io("/", { transports: ["websocket"] });
 
-  // Запрос камеры
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localVideo.srcObject = localStream;
+  // Получаем камеру/микрофон
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    log("✅ Камера и микрофон подключены");
+  } catch (err) {
+    console.error("Ошибка доступа к камере/микрофону:", err);
+  }
 
+  // Слушаем сигналы
   socket.on("offer", handleOffer);
   socket.on("answer", handleAnswer);
   socket.on("ice-candidate", handleCandidate);
@@ -31,7 +37,6 @@ function setupUI() {
   const nameInput = document.getElementById('nameInput');
   const sendBtn = document.getElementById('sendBtn');
   const messageInput = document.getElementById('messageInput');
-  const messages = document.getElementById('messages');
   const roomStatus = document.getElementById('roomStatus');
 
   joinBtn.onclick = () => {
@@ -51,25 +56,14 @@ function setupUI() {
     joinBtn.disabled = true;
     callBtn.disabled = false;
     
-    addMessage('system', `Вы вошли в комнату ${room}`);
+    log(`Вы вошли в комнату ${room}`);
   };
 
-  callBtn.onclick = async () => {
+  callBtn.onclick = () => {
     if (!currentRoom) return;
-    
-    await createPeerConnection();
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
-    
-    socket.emit("offer", {
-      roomId: currentRoom,
-      offer,
-      senderName: currentName
-    });
-    
+    startCall();
     callBtn.disabled = true;
     endBtn.disabled = false;
-    addMessage("system", "Звонок начат");
   };
 
   endBtn.onclick = () => {
@@ -86,7 +80,7 @@ function setupUI() {
     
     callBtn.disabled = false;
     endBtn.disabled = true;
-    addMessage('system', 'Звонок завершен');
+    log('Звонок завершен');
   };
 
   sendBtn.onclick = () => {
@@ -109,11 +103,11 @@ function setupUI() {
 
   // Socket события
   socket.on('user-connected', (data) => {
-    addMessage('system', `${data.userName} присоединился`);
+    log(`${data.userName} присоединился`);
   });
 
   socket.on('user-disconnected', (data) => {
-    addMessage('system', `${data.userName} покинул комнату`);
+    log(`${data.userName} покинул комнату`);
   });
 
   socket.on('chat-message', (data) => {
@@ -130,6 +124,16 @@ function addMessage(sender, message) {
   div.textContent = `${sender}: ${message}`;
   document.getElementById('messages').appendChild(div);
   document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+}
+
+function log(msg) {
+  console.log(msg);
+  const chat = document.getElementById("messages");
+  if (chat) {
+    const div = document.createElement("div");
+    div.textContent = "system: " + msg;
+    chat.appendChild(div);
+  }
 }
 
 async function createPeerConnection() {
@@ -158,7 +162,7 @@ async function createPeerConnection() {
 
   peerConnection = new RTCPeerConnection(config);
 
-  // Единый поток для удалённых треков
+  // Поток для удалённых треков
   remoteStream = new MediaStream();
   remoteVideo.srcObject = remoteStream;
 
@@ -167,15 +171,17 @@ async function createPeerConnection() {
     peerConnection.addTrack(track, localStream);
   });
 
-  // Когда приходят треки — добавляем в remoteStream
+  // Пришёл удалённый трек
   peerConnection.ontrack = (event) => {
-    console.log("📡 Пришёл трек:", event.track.kind);
+    log("📡 Пришёл трек: " + event.track.kind);
     remoteStream.addTrack(event.track);
-    remoteVideo.srcObject = remoteStream; // 🔥 Обновляем на всякий случай
+    remoteVideo.srcObject = remoteStream;
   };
 
+  // ICE кандидаты
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
+      log("➡️ Отправлен ICE кандидат");
       socket.emit("ice-candidate", {
         roomId: currentRoom,
         candidate: event.candidate,
@@ -183,23 +189,43 @@ async function createPeerConnection() {
       });
     }
   };
+
+  peerConnection.oniceconnectionstatechange = () => {
+    log("ICE state: " + peerConnection.iceConnectionState);
+  };
 }
 
-async function handleOffer(offer) {
+// Начало звонка
+async function startCall() {
+  await createPeerConnection();
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+  socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
+  log("📞 Отправлен offer");
+}
+
+// Обработка offer
+async function handleOffer({ offer, senderName }) {
+  log("📥 Получен offer от " + senderName);
   await createPeerConnection();
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConnection.createAnswer();
   await peerConnection.setLocalDescription(answer);
   socket.emit("answer", { answer, roomId: currentRoom, senderName: currentName });
+  log("📤 Отправлен answer");
 }
 
-async function handleAnswer(answer) {
+// Обработка answer
+async function handleAnswer({ answer }) {
+  log("📥 Получен answer");
   await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
+// Обработка ICE
 async function handleCandidate({ candidate }) {
   try {
     await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    log("✅ Добавлен ICE кандидат");
   } catch (err) {
     console.error("Ошибка ICE:", err);
   }
