@@ -1,46 +1,316 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Приватный Мессенджер</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>WebRTC Messenger</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    body { margin:0; font-family: sans-serif; background: linear-gradient(135deg, #6a85b6, #bac8e0); display:flex; justify-content:center; align-items:center; height:100vh; }
-    .container { background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); width:400px; text-align:center; }
-    input { padding:10px; margin:10px 0; width:90%; border:1px solid #ccc; border-radius:6px; }
-    button { padding:10px 20px; background:#6a85b6; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-    button:hover { background:#556e9b; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Контейнер */
+    #app {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    /* Контейнер с видео */
+    #videos {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex: 2;
+      min-height: 0;
+    }
+
+    /* Видео участника */
+    #remoteVideo {
+      width: 60%;
+      height: 70vh;
+      background: black;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 2px solid #fff;
+    }
+
+    /* Видео своё */
+    #localVideo {
+      width: 35%;
+      height: 50vh;
+      background: black;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 2px solid #fff;
+    }
+
+    /* Чат */
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      background: #2c1a4d;
+      color: white;
+      padding: 10px;
+      min-width: 300px;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Сообщения чата */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+
+    /* Поле ввода сообщения */
+    #messageInput {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #555;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      font-size: 14px;
+    }
+
+    /* Кнопка отправки сообщения */
+    #sendBtn {
+      margin-top: 5px;
+      padding: 8px 15px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    #sendBtn:hover {
+      background: #45a049;
+    }
+
+    .message {
+      margin: 3px 0;
+      padding: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      word-wrap: break-word;
+      font-size: 13px;
+    }
+
+    .system { 
+      color: #ffeb3b; 
+      font-style: italic; 
+    }
+
+    /* Панель управления */
+    #controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      background: #1b0f33;
+      flex-wrap: wrap;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    input, button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      min-width: 0;
+    }
+
+    input {
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+      white-space: nowrap;
+    }
+
+    button:hover { background: #45a049; }
+    button:disabled { background: #666; cursor: not-allowed; }
+
+    /* Мобильная версия */
+    @media (max-width: 768px) {
+      #app {
+        flex-direction: column;
+        padding: 5px;
+        gap: 5px;
+        height: calc(100vh - 120px); /* Учитываем высоту кнопок */
+      }
+
+      #videos {
+        position: relative;
+        flex: 1;
+        min-height: 50vh;
+        background: black;
+        border-radius: 8px;
+      }
+
+      #remoteVideo {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        border-radius: 8px;
+      }
+
+      #localVideo {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        width: 35%;
+        height: 30%;
+        z-index: 2;
+        border: 3px solid #fff;
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.7);
+      }
+
+      #chat {
+        flex: 0 0 180px;
+        min-width: 0;
+        max-width: none;
+        background: #2c1a4d;
+        border-radius: 8px;
+        margin-top: 5px;
+      }
+
+      #controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        gap: 5px;
+        padding: 10px;
+        background: #1b0f33;
+        z-index: 1000;
+      }
+
+      #controls input, #controls button {
+        width: 100%;
+        margin: 2px 0;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 8px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #app {
+        height: calc(100vh - 100px);
+      }
+
+      #videos {
+        min-height: 45vh;
+      }
+
+      #localVideo {
+        width: 40%;
+        height: 35%;
+        bottom: 10px;
+        right: 10px;
+        border: 2px solid #fff;
+      }
+
+      #controls input, #controls button { 
+        padding: 10px; 
+        font-size: 14px; 
+      }
+      
+      #chat {
+        flex: 0 0 160px;
+      }
+    }
+    /* ⚠️ Баннер для Telegram */
+    #inAppWarning {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: #ff4444;
+      color: #fff;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 9999;
+    }
+    #inAppWarning a { color: yellow; text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>🔒 Приватный Мессенджер</h2>
-    <p id="status">Сервер работает! Готов к использованию.</p>
-    <input id="username" type="text" placeholder="Введите ваше имя" />
-    <button onclick="createUser()">Создать аккаунт</button>
+  <div id="app">
+    <!-- Видео -->
+    <div id="videos">
+      <video id="localVideo" autoplay playsinline muted></video>
+      <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+
+    <!-- Чат -->
+    <div id="chat">
+      <div id="messages"></div>
+      <input type="text" id="messageInput" placeholder="Введите сообщение...">
+      <button id="sendBtn">Отправить</button>
+    </div>
   </div>
 
+  <!-- Панель управления -->
+  <div id="controls">
+    <input id="roomInput" placeholder="ID комнаты" value="" style="display: none;" />
+    <input id="nameInput" placeholder="Ваше имя" value="Пользователь1" />
+    <button id="joinBtn" style="display: none;">Войти в комнату</button>
+    <button id="callBtn" disabled>Начать звонок</button>
+    <button id="endBtn" disabled>Завершить</button>
+  </div>
+  <script src="/webrtc.js"></script>
   <script>
-    const socket = io("/", { transports: ["websocket"] });
-
-    async function createUser() {
-      const name = document.getElementById("username").value.trim();
-      if (!name) return alert("Введите имя!");
-
-      try {
-        const res = await fetch("/api/create-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name })
-        });
-        const data = await res.json();
-        alert("Аккаунт создан: " + JSON.stringify(data));
-      } catch (err) {
-        console.error(err);
-        alert("Ошибка при создании пользователя");
-      }
+    function isInAppBrowser() {
+      const ua = navigator.userAgent.toLowerCase();
+      return ua.includes("telegram") || ua.includes("instagram") || ua.includes("fbav") || ua.includes("tiktok");
     }
+    window.addEventListener("DOMContentLoaded", () => {
+      if (isInAppBrowser()) {
+        const div = document.createElement("div");
+        div.id = "inAppWarning";
+        div.innerHTML = `
+          ⚠️ Telegram-браузер не поддерживает видео-звонки.<br>
+          <a href="${window.location.href}">👉 Откройте в Chrome или Safari</a>
+        `;
+        document.body.appendChild(div);
+      }
+    });
   </script>
 </body>
 </html>

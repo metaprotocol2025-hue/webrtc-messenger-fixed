@@ -17,15 +17,8 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 
-// Serve static files with correct MIME types
-app.use((req, res, next) => {
-  if (req.path.endsWith('.js')) {
-    res.setHeader('Content-Type', 'application/javascript');
-  }
-  next();
-});
-
-app.use(express.static(path.join(__dirname)));
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
 
 // API endpoint
 app.post("/api/create-user", (req, res) => {
@@ -36,20 +29,14 @@ app.post("/api/create-user", (req, res) => {
   res.json({ success: true, user: { name } });
 });
 
-// Serve webrtc.js with correct headers
-app.get('/webrtc.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, 'webrtc.js'));
-});
-
 // Serve index.html for room routes
 app.get("/room/:roomId", (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Serve index.html for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Store rooms
