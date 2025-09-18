@@ -146,12 +146,9 @@ class WebRTCManager {
         }
       });
       
-      this.localVideo.srcObject = this.localStream;
-      
-      // Принудительное воспроизведение для мобильных
-      this.localVideo.play().catch(() => {
-        console.log('Автовоспроизведение локального видео заблокировано');
-      });
+          this.localVideo.srcObject = this.localStream;
+          this.localVideo.muted = true;
+          this.localVideo.play().catch(err => console.warn("Автовоспроизведение локального видео заблокировано:", err));
       
       this.addMessage('system', 'Камера подключена');
     } catch (error) {
@@ -216,6 +213,9 @@ class WebRTCManager {
   }
 
   async createPeerConnection() {
+    // Режим отладки TURN - принудительно используем только TURN
+    const debugMode = true; // Установите false для обычного режима
+    
     const config = {
       iceServers: [
         // Google STUN серверы
@@ -249,12 +249,18 @@ class WebRTCManager {
         { urls: "stun:stun.stunprotocol.org:3478" }
       ],
       iceCandidatePoolSize: 10,
-      iceTransportPolicy: 'all',
+      iceTransportPolicy: debugMode ? 'relay' : 'all',  // 🔥 форсируем TURN в режиме отладки
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require'
     };
 
     this.peerConnection = new RTCPeerConnection(config);
+
+    // Уведомление о режиме отладки
+    if (debugMode) {
+      console.log('🔥 РЕЖИМ ОТЛАДКИ TURN: принудительно используем только TURN серверы');
+      this.addMessage('system', '🔥 Режим отладки TURN: только TURN серверы');
+    }
 
     // Добавляем локальный поток один раз
     if (this.localStream) {
@@ -293,13 +299,14 @@ class WebRTCManager {
     // Обработка удаленного потока
     this.peerConnection.ontrack = (event) => {
       console.log('✅ Получен удаленный поток!');
-      this.remoteStream = event.streams[0];
-      this.remoteVideo.srcObject = this.remoteStream;
       
-      // Принудительное воспроизведение удаленного видео
-      this.remoteVideo.play().catch(() => {
-        console.log('Автовоспроизведение удаленного видео заблокировано');
-      });
+      if (!this.remoteStream) {
+        this.remoteStream = new MediaStream();
+        this.remoteVideo.srcObject = this.remoteStream;
+      }
+      
+      this.remoteStream.addTrack(event.track);
+      this.remoteVideo.play().catch(err => console.warn("Автовоспроизведение удалённого видео заблокировано:", err));
       
       this.addMessage('system', 'Видео соединение установлено!');
     };
