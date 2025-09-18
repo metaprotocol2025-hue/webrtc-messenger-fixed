@@ -202,14 +202,6 @@ async function createPeerConnection() {
 async function startCall() {
   await createPeerConnection();
   
-  // Убеждаемся, что локальные треки добавлены
-  if (localStream) {
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-      console.log("▶️ (StartCall) Добавлен локальный трек:", track.kind);
-    });
-  }
-  
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
   socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
@@ -221,7 +213,7 @@ async function handleOffer({ offer, senderName }) {
   log("📥 Получен offer от " + senderName);
   await createPeerConnection();
   
-  // Убеждаемся, что локальные треки добавлены
+  // Жёстко добавляем свои треки
   if (localStream) {
     localStream.getTracks().forEach(track => {
       peerConnection.addTrack(track, localStream);
@@ -240,15 +232,15 @@ async function handleOffer({ offer, senderName }) {
 async function handleAnswer({ answer }) {
   log("📥 Получен answer");
   
-  // Убеждаемся, что локальные треки добавлены
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+  
+  // Жёстко добавляем свои треки после setRemoteDescription
   if (localStream && peerConnection.getSenders().length === 0) {
     localStream.getTracks().forEach(track => {
       peerConnection.addTrack(track, localStream);
       console.log("▶️ (Answer) Добавлен локальный трек:", track.kind);
     });
   }
-  
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
 // Обработка ICE
