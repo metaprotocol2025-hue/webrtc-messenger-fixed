@@ -178,8 +178,6 @@ class WebRTCManager {
     const config = {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" },
         {
           urls: "turn:global.turn.twilio.com:3478?transport=udp",
           username: "TWILIO_USERNAME",
@@ -189,14 +187,8 @@ class WebRTCManager {
           urls: "turn:global.turn.twilio.com:3478?transport=tcp",
           username: "TWILIO_USERNAME",
           credential: "TWILIO_PASSWORD"
-        },
-        {
-          urls: "turns:global.turn.twilio.com:443?transport=tcp",
-          username: "TWILIO_USERNAME",
-          credential: "TWILIO_PASSWORD"
         }
-      ],
-      iceCandidatePoolSize: 10
+      ]
     };
 
     this.peerConnection = new RTCPeerConnection(config);
@@ -269,7 +261,9 @@ class WebRTCManager {
       await this.createPeerConnection();
 
       if (!this.peerConnection.currentRemoteDescription) {
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        await this.peerConnection.setRemoteDescription(
+          new RTCSessionDescription(data.offer)
+        );
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
 
@@ -289,7 +283,9 @@ class WebRTCManager {
   async handleAnswer(data) {
     try {
       if (this.peerConnection) {
-        await this.peerConnection.setRemoteDescription(data.answer);
+        await this.peerConnection.setRemoteDescription(
+          new RTCSessionDescription(data.answer)
+        );
         this.addMessage('system', `Ответ получен от ${data.senderName}`);
       }
     } catch (error) {
@@ -300,7 +296,9 @@ class WebRTCManager {
   async handleIceCandidate(data) {
     try {
       if (this.peerConnection && data.candidate) {
-        await this.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        await this.peerConnection.addIceCandidate(
+          new RTCIceCandidate(data.candidate)
+        );
       }
     } catch (error) {
       console.error("Ошибка ICE:", error);
