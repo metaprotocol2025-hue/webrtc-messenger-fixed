@@ -65,7 +65,8 @@ class WebRTCManager {
       };
 
       // Создаем dummy offer для тестирования
-      await pc.createOffer();
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
     } catch (error) {
       console.error('Ошибка тестирования TURN:', error);
     }
