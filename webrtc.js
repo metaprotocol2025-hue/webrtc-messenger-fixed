@@ -168,6 +168,8 @@ class WebRTCManager {
   async startCall() {
     if (!this.currentRoom || this.isInCall) return;
 
+    console.log("📞 Начинаю звонок...");
+
     // Закрываем старое соединение если есть
     if (this.peerConnection) {
       this.peerConnection.close();
@@ -176,9 +178,12 @@ class WebRTCManager {
 
     try {
       await this.createPeerConnection();
+      
+      console.log("📤 Создаю offer...");
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
+      console.log("📤 Отправляю offer...");
       this.socket.emit("offer", {
         roomId: this.currentRoom,
         offer,
@@ -304,9 +309,10 @@ class WebRTCManager {
       console.log("📡 Текущее ICE состояние:", this.peerConnection.iceConnectionState);
     });
 
-    // Добавляем локальный поток один раз
+    // Добавляем локальные треки
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => {
+        console.log("🎥 Добавляю локальный трек:", track.kind);
         this.peerConnection.addTrack(track, this.localStream);
       });
     }
@@ -315,7 +321,9 @@ class WebRTCManager {
 
     // Обработка удаленного потока
     this.peerConnection.ontrack = (event) => {
-      console.log('✅ Получен удаленный поток!');
+      console.log("🎧 Пришёл удалённый трек:", event.streams);
+      console.log("🎧 Тип трека:", event.track.kind);
+      console.log("🎧 ID трека:", event.track.id);
       
       if (!this.remoteStream) {
         this.remoteStream = new MediaStream();
@@ -323,7 +331,9 @@ class WebRTCManager {
       }
       
       this.remoteStream.addTrack(event.track);
-      this.remoteVideo.play().catch(err => console.warn("Автовоспроизведение удалённого видео заблокировано:", err));
+      this.remoteVideo.play().catch(() => {
+        console.warn("⚠️ Автовоспроизведение удалённого видео заблокировано");
+      });
       
       this.addMessage('system', 'Видео соединение установлено!');
     };
@@ -333,6 +343,9 @@ class WebRTCManager {
 
   async handleOffer(data) {
     try {
+      console.log("📥 Получен offer от:", data.senderName);
+      console.log("📥 Устанавливаю RemoteDescription:", data);
+      
       // Закрываем старое соединение если есть
       if (this.peerConnection) {
         this.peerConnection.close();
@@ -342,9 +355,12 @@ class WebRTCManager {
       await this.createPeerConnection();
 
       if (!this.peerConnection.currentRemoteDescription) {
+        console.log("📥 Устанавливаю RemoteDescription для offer...");
         await this.peerConnection.setRemoteDescription(
           new RTCSessionDescription(data.offer)
         );
+        
+        console.log("📤 Создаю answer...");
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
 
@@ -363,7 +379,11 @@ class WebRTCManager {
 
   async handleAnswer(data) {
     try {
+      console.log("📥 Получен answer от:", data.senderName);
+      console.log("📥 Устанавливаю RemoteDescription:", data);
+      
       if (this.peerConnection) {
+        console.log("📥 Устанавливаю RemoteDescription для answer...");
         await this.peerConnection.setRemoteDescription(
           new RTCSessionDescription(data.answer)
         );
