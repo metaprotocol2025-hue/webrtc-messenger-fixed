@@ -21,11 +21,53 @@ if (typeof require !== 'undefined') {
   // Браузерное окружение
   ICE_CONFIG = window.ICE_CONFIG || {
     iceServers: [
+      // Google STUN серверы
       { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
+      
+      // Дополнительные STUN серверы
+      { urls: "stun:stun.ekiga.net" },
+      { urls: "stun:stun.ideasip.com" },
+      { urls: "stun:stun.schlund.de" },
+      { urls: "stun:stun.stunprotocol.org:3478" },
+      { urls: "stun:stun.voiparound.com" },
+      { urls: "stun:stun.voipbuster.com" },
+      { urls: "stun:stun.voipstunt.com" },
+      { urls: "stun:stun.counterpath.com" },
+      { urls: "stun:stun.1und1.de" },
+      { urls: "stun:stun.gmx.net" },
+      
+      // TURN серверы
       {
-        urls: "turn:openrelay.metered.ca:80",
+        urls: [
+          "turn:openrelay.metered.ca:80?transport=udp",
+          "turn:openrelay.metered.ca:443?transport=tcp"
+        ],
         username: "openrelayproject",
         credential: "openrelayproject"
+      },
+      {
+        urls: "turn:numb.viagenie.ca",
+        username: "webrtc@live.com",
+        credential: "muazkh"
+      },
+      {
+        urls: "turn:turn.bistri.com:80",
+        username: "homeo",
+        credential: "homeo"
+      },
+      {
+        urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+        username: "webrtc",
+        credential: "webrtc"
+      },
+      {
+        urls: "turn:turn.anyfirewall.com:80?transport=udp",
+        username: "webrtc",
+        credential: "webrtc"
       }
     ],
     iceCandidatePoolSize: 10,
@@ -140,24 +182,7 @@ function setupUI() {
   };
 
   endBtn.onclick = () => {
-    if (peerConnection) {
-      peerConnection.close();
-      peerConnection = null;
-    }
-    
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-      localVideo.srcObject = null;
-    }
-
-    // Remove dynamically created audio elements
-    document.querySelectorAll('audio[data-webrtc-remote]').forEach(audio => audio.remove());
-    
-    remoteVideo.srcObject = null;
-    
-    callBtn.disabled = false;
-    endBtn.disabled = true;
-    log('Звонок завершен');
+    endCall();
   };
 
   // Обработчики чата
@@ -246,6 +271,31 @@ function playJoinSound() {
   }
 }
 
+function endCall() {
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localVideo.srcObject = null;
+  }
+
+  // Remove dynamically created audio elements
+  document.querySelectorAll('audio[data-webrtc-remote]').forEach(audio => audio.remove());
+  
+  remoteVideo.srcObject = null;
+  
+  // Update UI buttons
+  const callBtn = document.getElementById('callBtn');
+  const endBtn = document.getElementById('endBtn');
+  if (callBtn) callBtn.disabled = false;
+  if (endBtn) endBtn.disabled = true;
+  
+  log('Звонок завершен');
+}
+
 async function createPeerConnection() {
   console.log("🔧 Создание RTCPeerConnection с конфигурацией:", ICE_CONFIG);
   
@@ -282,7 +332,17 @@ async function createPeerConnection() {
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       console.log("🧊 ICE кандидат:", event.candidate.candidate);
-      log("➡️ Отправлен ICE кандидат");
+      console.log("🧊 Тип кандидата:", event.candidate.type);
+      console.log("🧊 Протокол:", event.candidate.protocol);
+      console.log("🧊 Адрес:", event.candidate.address);
+      
+      // Определяем тип кандидата
+      let candidateType = "host";
+      if (event.candidate.type === "srflx") candidateType = "STUN";
+      if (event.candidate.type === "relay") candidateType = "TURN";
+      
+      log(`➡️ Отправлен ICE кандидат (${candidateType}): ${event.candidate.address}`);
+      
       socket.emit("ice-candidate", {
         roomId: currentRoom,
         candidate: event.candidate,
