@@ -179,18 +179,12 @@ async function createPeerConnection() {
   remoteStream = new MediaStream();
   remoteVideo.srcObject = remoteStream;
 
-  // Базовое добавление локальных треков (дублируется в startCall/handleOffer)
-  if (localStream) {
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-      console.log("▶️ (Base) Добавлен локальный трек:", track.kind);
-    });
-  }
+  // Треки добавляются только в startCall и handleOffer
 
   // Пришёл удалённый трек
   peerConnection.ontrack = (event) => {
+    console.log("📡 Пришёл трек", event.streams);
     log("📡 Пришёл трек: " + event.track.kind);
-    console.log("📡 Streams:", event.streams);
     
     // Используем event.streams[0] для мобильных устройств
     if (event.streams && event.streams[0]) {
@@ -225,7 +219,7 @@ async function createPeerConnection() {
 async function startCall() {
   await createPeerConnection();
   
-  // Гарантированно добавляем треки перед createOffer
+  // 1. Добавляем ВСЕ треки в RTCPeerConnection
   if (localStream) {
     localStream.getTracks().forEach(track => {
       peerConnection.addTrack(track, localStream);
@@ -233,12 +227,16 @@ async function startCall() {
     });
   }
   
+  // 2. Только теперь создаём offer
   const offer = await peerConnection.createOffer();
   console.log("📄 SDP Offer:", offer.sdp);
   log("📞 SDP содержит медиа: " + (offer.sdp.includes('m=audio') ? 'аудио' : 'нет аудио') + 
       ", " + (offer.sdp.includes('m=video') ? 'видео' : 'нет видео'));
   
+  // 3. Устанавливаем локальное описание
   await peerConnection.setLocalDescription(offer);
+  
+  // 4. Отправляем offer через сигнальный сервер
   socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
   log("📞 Отправлен offer");
 }
@@ -248,7 +246,7 @@ async function handleOffer({ offer, senderName }) {
   log("📥 Получен offer от " + senderName);
   await createPeerConnection();
   
-  // Гарантированно добавляем треки перед createAnswer
+  // 1. Добавляем ВСЕ треки в RTCPeerConnection
   if (localStream) {
     localStream.getTracks().forEach(track => {
       peerConnection.addTrack(track, localStream);
@@ -256,13 +254,19 @@ async function handleOffer({ offer, senderName }) {
     });
   }
   
+  // 2. Устанавливаем удаленное описание
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+  
+  // 3. Только теперь создаём answer
   const answer = await peerConnection.createAnswer();
   console.log("📄 SDP Answer:", answer.sdp);
   log("📤 SDP содержит медиа: " + (answer.sdp.includes('m=audio') ? 'аудио' : 'нет аудио') + 
       ", " + (answer.sdp.includes('m=video') ? 'видео' : 'нет видео'));
   
+  // 4. Устанавливаем локальное описание
   await peerConnection.setLocalDescription(answer);
+  
+  // 5. Отправляем answer через сигнальный сервер
   socket.emit("answer", { answer, roomId: currentRoom, senderName: currentName });
   log("📤 Отправлен answer");
 }
