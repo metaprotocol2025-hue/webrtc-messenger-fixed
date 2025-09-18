@@ -183,18 +183,29 @@ async function createPeerConnection() {
 
   // Пришёл удалённый трек
   peerConnection.ontrack = (event) => {
-    console.log("📡 Пришёл трек", event.streams);
-    log("📡 Пришёл трек: " + event.track.kind);
-    
-    // Используем event.streams[0] для мобильных устройств
-    if (event.streams && event.streams[0]) {
-      remoteVideo.srcObject = event.streams[0];
-      log("✅ Удаленное видео установлено через streams[0]");
-    } else {
-      // Fallback: добавляем в remoteStream
-      remoteStream.addTrack(event.track);
-      remoteVideo.srcObject = remoteStream;
-      log("✅ Удаленное видео установлено через addTrack");
+    console.log("📡 Пришёл трек:", event.track.kind);
+
+    if (event.track.kind === "video") {
+      // Видео кидаем в remoteVideo
+      if (event.streams && event.streams[0]) {
+        remoteVideo.srcObject = event.streams[0];
+        remoteVideo.autoplay = true;
+        remoteVideo.playsInline = true;
+        console.log("✅ Установлено удалённое ВИДЕО");
+        log("✅ Удаленное видео установлено");
+      }
+    }
+
+    if (event.track.kind === "audio") {
+      // Для аудио создаём отдельный элемент
+      let audioElem = document.createElement("audio");
+      audioElem.srcObject = event.streams[0];
+      audioElem.autoplay = true;
+      audioElem.controls = false; // чтобы не показывался UI
+      audioElem.style.display = "none"; // скрываем
+      document.body.appendChild(audioElem);
+      console.log("✅ Установлено удалённое АУДИО");
+      log("✅ Удаленное аудио установлено");
     }
   };
 
