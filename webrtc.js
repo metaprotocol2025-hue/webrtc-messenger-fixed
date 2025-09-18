@@ -48,9 +48,6 @@ function setupUI() {
   const endBtn = document.getElementById('endBtn');
   const roomInput = document.getElementById('roomInput');
   const nameInput = document.getElementById('nameInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const messageInput = document.getElementById('messageInput');
-  const roomStatus = document.getElementById('roomStatus');
 
   joinBtn.onclick = () => {
     const room = roomInput.value.trim();
@@ -65,7 +62,6 @@ function setupUI() {
     currentName = name;
     
     socket.emit('join-room', room, name);
-    roomStatus.textContent = `В комнате: ${room}`;
     joinBtn.disabled = true;
     callBtn.disabled = false;
     
@@ -96,23 +92,6 @@ function setupUI() {
     log('Звонок завершен');
   };
 
-  sendBtn.onclick = () => {
-    const message = messageInput.value.trim();
-    if (!message || !currentRoom) return;
-    
-    socket.emit('chat-message', {
-      roomId: currentRoom,
-      message: message,
-      userName: currentName
-    });
-    
-    addMessage(currentName, message);
-    messageInput.value = '';
-  };
-
-  messageInput.onkeypress = (e) => {
-    if (e.key === 'Enter') sendBtn.onclick();
-  };
 
   // Socket события
   socket.on('user-connected', (data) => {
@@ -135,17 +114,19 @@ function addMessage(sender, message) {
     div.className += ' system';
   }
   div.textContent = `${sender}: ${message}`;
-  document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  document.getElementById('chat').appendChild(div);
+  document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
 }
 
 function log(msg) {
   console.log(msg);
-  const chat = document.getElementById("messages");
+  const chat = document.getElementById("chat");
   if (chat) {
     const div = document.createElement("div");
-    div.textContent = "system: " + msg;
+    div.className = "message system";
+    div.textContent = msg;
     chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight; // Scroll to bottom
   }
 }
 

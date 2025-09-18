@@ -15,66 +15,44 @@
       height: 100vh;
       overflow: hidden;
     }
-    
-    /* Общие стили для видео */
-    video {
-      object-fit: cover;
-      border-radius: 10px;
+
+    /* Контейнер */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Видео */
+    #video-container {
+      position: relative;
+      flex: 1;
       background: black;
     }
 
-    /* Контейнер для всего */
-    .main-container {
-      display: flex;
-      flex-direction: row;
-      height: 100vh;
-      gap: 10px;
-      padding: 10px;
-      box-sizing: border-box;
-    }
-
-    /* Контейнер с видео */
-    .video-container {
-      flex: 2;
-      display: grid;
-      grid-template-columns: 1fr 1fr; /* На ПК: два видео рядом */
-      gap: 10px;
-      position: relative;
-    }
-
-    /* Видео на ПК */
-    #localVideo, #remoteVideo {
+    #remoteVideo {
       width: 100%;
       height: 100%;
+      object-fit: cover;
     }
 
-    /* Чат справа на ПК */
-    .chat-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background: rgba(0,0,0,0.3);
-      border-radius: 10px;
-      padding: 10px;
+    #localVideo {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 30%;
+      max-width: 150px;
+      border: 2px solid white;
+      border-radius: 8px;
+    }
+
+    /* Чат */
+    #chat {
+      flex: 0 0 200px;
       overflow-y: auto;
-    }
-
-    .room-info {
-      background: rgba(255,255,255,0.1);
-      padding: 8px;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-
-    .messages {
-      flex: 1;
-      background: rgba(0,0,0,0.2);
-      padding: 8px;
-      border-radius: 5px;
-      overflow-y: auto;
-      margin-bottom: 10px;
-      font-size: 13px;
+      background: #2c1a4d;
+      color: white;
+      padding: 5px;
     }
 
     .message {
@@ -83,20 +61,22 @@
       background: rgba(255,255,255,0.1);
       border-radius: 3px;
       word-wrap: break-word;
+      font-size: 13px;
     }
 
-    .system { color: #ffeb3b; font-style: italic; }
+    .system { 
+      color: #ffeb3b; 
+      font-style: italic; 
+    }
 
-    .message-input-container { display: flex; gap: 8px; }
-    .message-input-container input { flex: 1; }
-    .message-input-container button { flex-shrink: 0; }
-
-    .controls {
+    /* Панель управления */
+    #controls {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
       justify-content: center;
-      margin-bottom: 15px;
+      gap: 10px;
+      padding: 10px;
+      background: #1b0f33;
+      flex-wrap: wrap;
     }
 
     input, button {
@@ -125,53 +105,32 @@
     button:hover { background: #45a049; }
     button:disabled { background: #666; cursor: not-allowed; }
 
-    /* ==== 📱 Мобильная версия ==== */
+    /* Мобильная версия */
     @media (max-width: 768px) {
-      .main-container {
-        flex-direction: column;
-      }
-
-      .video-container {
-        display: block; /* Одно большое видео */
-        position: relative;
-      }
-
-      #remoteVideo {
-        width: 100%;
-        height: 60vh; /* Друг занимает основное место */
-      }
-
-      #localVideo {
-        position: absolute;
-        width: 30%;
-        height: 25%;
-        bottom: 10px;
-        right: 10px;
-        border: 2px solid white;
-        z-index: 10;
-      }
-
-      .chat-container {
-        max-height: 30vh;
-        width: 100%;
-        margin-top: 10px;
-      }
-
-      .controls {
+      #controls {
         flex-direction: column;
         gap: 5px;
-        margin-bottom: 10px;
       }
 
-      .controls input, .controls button {
+      #controls input, #controls button {
         width: 100%;
         margin: 2px 0;
+      }
+
+      #chat {
+        flex: 0 0 150px;
       }
     }
 
     @media (max-width: 480px) {
-      .controls { gap: 3px; }
-      .controls input, .controls button { padding: 6px 8px; font-size: 12px; }
+      #controls input, #controls button { 
+        padding: 6px 8px; 
+        font-size: 12px; 
+      }
+      
+      #chat {
+        flex: 0 0 120px;
+      }
     }
     /* ⚠️ Баннер для Telegram */
     #inAppWarning {
@@ -191,32 +150,24 @@
   </style>
 </head>
 <body>
-  <div class="main-container">
-    <div class="video-container">
-      <video id="localVideo" autoplay muted playsinline></video>
+  <div id="app">
+    <!-- Видео -->
+    <div id="video-container">
       <video id="remoteVideo" autoplay playsinline></video>
+      <video id="localVideo" autoplay playsinline muted></video>
     </div>
-    
-    <div class="chat-container">
-      <div class="room-info">
-        <div id="roomStatus">Не подключен</div>
-      </div>
-      
-      <div class="messages" id="messages"></div>
-      
-      <div class="message-input-container">
-        <input type="text" id="messageInput" placeholder="Введите сообщение...">
-        <button id="sendBtn">Отправить</button>
-      </div>
+
+    <!-- Чат -->
+    <div id="chat"></div>
+
+    <!-- Панель управления -->
+    <div id="controls">
+      <input id="roomInput" placeholder="room1" value="room1" />
+      <input id="nameInput" placeholder="Пользователь1" value="Пользователь1" />
+      <button id="joinBtn">Войти в комнату</button>
+      <button id="callBtn" disabled>Начать звонок</button>
+      <button id="endBtn" disabled>Завершить</button>
     </div>
-  </div>
-  
-  <div class="controls">
-    <input type="text" id="roomInput" placeholder="Название комнаты" value="room1">
-    <input type="text" id="nameInput" placeholder="Ваше имя" value="Пользователь1">
-    <button id="joinBtn">Войти в комнату</button>
-    <button id="callBtn" disabled>Начать звонок</button>
-    <button id="endBtn" disabled>Завершить</button>
   </div>
   <script src="webrtc.js"></script>
   <script>
