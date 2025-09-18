@@ -27,7 +27,12 @@ app.post("/api/create-user", (req, res) => {
   res.json({ success: true, user: { name } });
 });
 
-// Serve index.html for all routes
+// Serve index.html for room routes
+app.get("/room/:roomId", (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Serve index.html for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

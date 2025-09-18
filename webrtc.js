@@ -8,6 +8,22 @@ let currentName;
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 
+// Автоматическое определение комнаты из URL
+function getRoomFromURL() {
+  const urlParams = window.location.pathname.split("/");
+  let roomId = urlParams.includes("room") ? urlParams.pop() : null;
+  
+  if (!roomId) {
+    // Генерируем новый случайный ID
+    roomId = Math.random().toString(36).substr(2, 8);
+    // Редиректим на уникальную ссылку
+    window.location.href = `/room/${roomId}`;
+    return null;
+  }
+  
+  return roomId;
+}
+
 async function init() {
   socket = io("/", { transports: ["websocket"] });
 
@@ -40,6 +56,24 @@ async function init() {
   
   // UI обработчики
   setupUI();
+  
+  // Автоматическое подключение к комнате
+  const roomId = getRoomFromURL();
+  if (roomId) {
+    currentRoom = roomId;
+    currentName = "Пользователь" + Math.floor(Math.random() * 1000);
+    
+    // Обновляем поля ввода
+    document.getElementById('roomInput').value = roomId;
+    document.getElementById('nameInput').value = currentName;
+    
+    // Автоматически подключаемся к комнате
+    socket.emit('join-room', roomId, currentName);
+    document.getElementById('joinBtn').disabled = true;
+    document.getElementById('callBtn').disabled = false;
+    
+    log(`🔗 Автоматически подключились к комнате: ${roomId}`);
+  }
 }
 
 function setupUI() {
