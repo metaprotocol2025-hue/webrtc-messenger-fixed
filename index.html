@@ -12,78 +12,53 @@
       font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      display: flex;
       height: 100vh;
       overflow: hidden;
     }
+    
+    /* Общие стили для видео */
+    video {
+      object-fit: cover;
+      border-radius: 10px;
+      background: black;
+    }
+
+    /* Контейнер для всего */
+    .main-container {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    /* Контейнер с видео */
     .video-container {
       flex: 2;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 10px;
-      min-width: 0;
-    }
-    .video-wrapper {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* На ПК: два видео рядом */
       gap: 10px;
-      margin-bottom: 15px;
+      position: relative;
+    }
+
+    /* Видео на ПК */
+    #localVideo, #remoteVideo {
       width: 100%;
-      max-width: 800px;
+      height: 100%;
     }
-    .video-box { flex: 1; min-width: 0; }
-    .video-box h3 {
-      margin: 0 0 5px 0;
-      font-size: 14px;
-      text-align: center;
-    }
-    video {
-      width: 100%;
-      height: 200px;
-      background: #000;
-      border-radius: 10px;
-      border: 2px solid #fff;
-      object-fit: cover;
-    }
-    .controls {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: center;
-      width: 100%;
-      max-width: 800px;
-    }
-    input, button {
-      padding: 8px 12px;
-      border: none;
-      border-radius: 5px;
-      font-size: 14px;
-      min-width: 0;
-    }
-    input {
-      background: rgba(255,255,255,0.9);
-      color: #333;
-      flex: 1;
-      min-width: 120px;
-    }
-    button {
-      background: #4CAF50;
-      color: white;
-      cursor: pointer;
-      transition: background 0.3s;
-      white-space: nowrap;
-    }
-    button:hover { background: #45a049; }
-    button:disabled { background: #666; cursor: not-allowed; }
+
+    /* Чат справа на ПК */
     .chat-container {
       flex: 1;
-      background: rgba(0,0,0,0.3);
-      padding: 15px;
       display: flex;
       flex-direction: column;
-      min-width: 300px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 10px;
+      overflow-y: auto;
     }
+
     .room-info {
       background: rgba(255,255,255,0.1);
       padding: 8px;
@@ -91,6 +66,7 @@
       margin-bottom: 10px;
       font-size: 14px;
     }
+
     .messages {
       flex: 1;
       background: rgba(0,0,0,0.2);
@@ -100,6 +76,7 @@
       margin-bottom: 10px;
       font-size: 13px;
     }
+
     .message {
       margin: 3px 0;
       padding: 4px;
@@ -107,23 +84,92 @@
       border-radius: 3px;
       word-wrap: break-word;
     }
+
     .system { color: #ffeb3b; font-style: italic; }
+
     .message-input-container { display: flex; gap: 8px; }
     .message-input-container input { flex: 1; }
     .message-input-container button { flex-shrink: 0; }
-    /* Мобильные стили */
-    @media (max-width: 768px) {
-      body { flex-direction: column; height: 100vh; }
-      .video-container { flex: 1; padding: 5px; }
-      .video-wrapper { flex-direction: column; gap: 5px; margin-bottom: 10px; }
-      video { height: 150px; }
-      .controls { flex-direction: column; gap: 5px; }
-      .controls input, .controls button { width: 100%; margin: 2px 0; }
-      .chat-container { flex: 1; min-width: 0; padding: 10px; }
-      .messages { font-size: 12px; }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 15px;
     }
+
+    input, button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      min-width: 0;
+    }
+
+    input {
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+      white-space: nowrap;
+    }
+
+    button:hover { background: #45a049; }
+    button:disabled { background: #666; cursor: not-allowed; }
+
+    /* ==== 📱 Мобильная версия ==== */
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+
+      .video-container {
+        display: block; /* Одно большое видео */
+        position: relative;
+      }
+
+      #remoteVideo {
+        width: 100%;
+        height: 60vh; /* Друг занимает основное место */
+      }
+
+      #localVideo {
+        position: absolute;
+        width: 30%;
+        height: 25%;
+        bottom: 10px;
+        right: 10px;
+        border: 2px solid white;
+        z-index: 10;
+      }
+
+      .chat-container {
+        max-height: 30vh;
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .controls {
+        flex-direction: column;
+        gap: 5px;
+        margin-bottom: 10px;
+      }
+
+      .controls input, .controls button {
+        width: 100%;
+        margin: 2px 0;
+      }
+    }
+
     @media (max-width: 480px) {
-      video { height: 120px; }
       .controls { gap: 3px; }
       .controls input, .controls button { padding: 6px 8px; font-size: 12px; }
     }
@@ -145,32 +191,32 @@
   </style>
 </head>
 <body>
-  <div class="video-container">
-    <div class="video-wrapper">
-      <div class="video-box">
-        <h3>Вы</h3>
-        <video id="localVideo" autoplay muted playsinline></video>
-      </div>
-      <div class="video-box">
-        <h3>Участник</h3>
-        <video id="remoteVideo" autoplay playsinline></video>
-      </div>
+  <div class="main-container">
+    <div class="video-container">
+      <video id="localVideo" autoplay muted playsinline></video>
+      <video id="remoteVideo" autoplay playsinline></video>
     </div>
-    <div class="controls">
-      <input type="text" id="roomInput" placeholder="Название комнаты" value="room1">
-      <input type="text" id="nameInput" placeholder="Ваше имя" value="Пользователь1">
-      <button id="joinBtn">Войти в комнату</button>
-      <button id="callBtn" disabled>Начать звонок</button>
-      <button id="endBtn" disabled>Завершить</button>
+    
+    <div class="chat-container">
+      <div class="room-info">
+        <div id="roomStatus">Не подключен</div>
+      </div>
+      
+      <div class="messages" id="messages"></div>
+      
+      <div class="message-input-container">
+        <input type="text" id="messageInput" placeholder="Введите сообщение...">
+        <button id="sendBtn">Отправить</button>
+      </div>
     </div>
   </div>
-  <div class="chat-container">
-    <div class="room-info"><div id="roomStatus">Не подключен</div></div>
-    <div class="messages" id="messages"></div>
-    <div class="message-input-container">
-      <input type="text" id="messageInput" placeholder="Введите сообщение...">
-      <button id="sendBtn">Отправить</button>
-    </div>
+  
+  <div class="controls">
+    <input type="text" id="roomInput" placeholder="Название комнаты" value="room1">
+    <input type="text" id="nameInput" placeholder="Ваше имя" value="Пользователь1">
+    <button id="joinBtn">Войти в комнату</button>
+    <button id="callBtn" disabled>Начать звонок</button>
+    <button id="endBtn" disabled>Завершить</button>
   </div>
   <script src="webrtc.js"></script>
   <script>
