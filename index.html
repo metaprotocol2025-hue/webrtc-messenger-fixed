@@ -164,12 +164,15 @@
         flex-direction: column;
         padding: 5px;
         gap: 5px;
+        height: calc(100vh - 120px); /* Учитываем высоту кнопок */
       }
 
       #videos {
         position: relative;
         flex: 1;
-        min-height: 60vh;
+        min-height: 50vh;
+        background: black;
+        border-radius: 8px;
       }
 
       #remoteVideo {
@@ -179,58 +182,75 @@
         top: 0;
         left: 0;
         z-index: 1;
+        border-radius: 8px;
       }
 
       #localVideo {
         position: absolute;
-        bottom: 10px;
-        right: 10px;
-        width: 30%;
-        height: 25%;
+        bottom: 15px;
+        right: 15px;
+        width: 35%;
+        height: 30%;
         z-index: 2;
         border: 3px solid #fff;
-        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.7);
       }
 
       #chat {
-        flex: 0 0 200px;
+        flex: 0 0 180px;
         min-width: 0;
         max-width: none;
+        background: #2c1a4d;
+        border-radius: 8px;
+        margin-top: 5px;
       }
 
       #controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
         flex-direction: column;
         gap: 5px;
-        padding: 5px;
+        padding: 10px;
+        background: #1b0f33;
+        z-index: 1000;
       }
 
       #controls input, #controls button {
         width: 100%;
         margin: 2px 0;
-        padding: 10px;
+        padding: 12px;
         font-size: 16px;
+        border-radius: 8px;
       }
     }
 
     @media (max-width: 480px) {
+      #app {
+        height: calc(100vh - 100px);
+      }
+
       #videos {
-        min-height: 50vh;
+        min-height: 45vh;
       }
 
       #localVideo {
-        width: 25%;
-        height: 20%;
-        bottom: 5px;
-        right: 5px;
+        width: 40%;
+        height: 35%;
+        bottom: 10px;
+        right: 10px;
+        border: 2px solid #fff;
       }
 
       #controls input, #controls button { 
-        padding: 8px 10px; 
+        padding: 10px; 
         font-size: 14px; 
       }
       
       #chat {
-        flex: 0 0 150px;
+        flex: 0 0 160px;
       }
     }
     /* ⚠️ Баннер для Telegram */
