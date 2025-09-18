@@ -206,10 +206,12 @@ class WebRTCManager {
       this.peerConnection = null;
     }
     
+    // Очищаем удаленный поток
     if (this.remoteStream) {
-      this.remoteVideo.srcObject = null;
+      this.remoteStream.getTracks().forEach(track => track.stop());
       this.remoteStream = null;
     }
+    this.remoteVideo.srcObject = null;
     
     this.isInCall = false;
     this.callBtn.disabled = false;
@@ -218,17 +220,11 @@ class WebRTCManager {
   }
 
   async createPeerConnection() {
-    // Режим отладки TURN - принудительно используем только TURN
-    const debugMode = true; // Установите false для обычного режима
-    
     const config = {
       iceServers: [
-        // Google STUN серверы
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
         { urls: "stun:stun2.l.google.com:19302" },
-        
-        // РАБОЧИЕ TURN серверы Metered.ca (бесплатные)
         {
           urls: "turn:openrelay.metered.ca:80",
           username: "openrelayproject",
@@ -243,35 +239,32 @@ class WebRTCManager {
           urls: "turn:openrelay.metered.ca:443?transport=tcp",
           username: "openrelayproject",
           credential: "openrelayproject"
-        },
-        
-        // Дополнительные TURN серверы (убраны placeholder креды)
-        
-        // Дополнительные STUN серверы
-        { urls: "stun:stun.ekiga.net" },
-        { urls: "stun:stun.ideasip.com" },
-        { urls: "stun:stun.schlund.de" },
-        { urls: "stun:stun.stunprotocol.org:3478" }
+        }
       ],
       iceCandidatePoolSize: 10,
-      iceTransportPolicy: debugMode ? 'relay' : 'all',  // 🔥 форсируем TURN в режиме отладки
+      iceTransportPolicy: 'all',
       bundlePolicy: 'max-bundle',
       rtcpMuxPolicy: 'require'
     };
 
     this.peerConnection = new RTCPeerConnection(config);
 
-    // Уведомление о режиме отладки
-    if (debugMode) {
-      console.log('🔥 РЕЖИМ ОТЛАДКИ TURN: принудительно используем только TURN серверы');
-      this.addMessage('system', '🔥 Режим отладки TURN: только TURN серверы');
+    // Создаём общий MediaStream для удалённого видео
+    this.remoteStream = new MediaStream();
+    this.remoteVideo.srcObject = this.remoteStream;
+
+    // Добавляем локальный поток
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        console.log("🎥 Добавляю локальный трек:", track.kind);
+        this.peerConnection.addTrack(track, this.localStream);
+      });
     }
 
-    // Логируем все ICE кандидаты
+    // Обработка ICE кандидатов
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         console.log("📡 Новый ICE кандидат:", event.candidate.candidate);
-
         this.socket.emit("ice-candidate", {
           roomId: this.currentRoom,
           candidate: event.candidate,
@@ -282,63 +275,24 @@ class WebRTCManager {
       }
     };
 
-    // Логируем изменения состояния ICE
-    this.peerConnection.oniceconnectionstatechange = () => {
-      console.log("🌐 ICE состояние:", this.peerConnection.iceConnectionState);
-      this.addMessage("system", `ICE: ${this.peerConnection.iceConnectionState}`);
+    // Когда приходит трек — добавляем его в remoteStream
+    this.peerConnection.ontrack = (event) => {
+      console.log("📡 Пришёл удалённый трек:", event.track.kind);
+      this.remoteStream.addTrack(event.track);
+      this.addMessage('system', 'Видео соединение установлено!');
     };
 
-    // Логируем выбранного кандидата (путь соединения)
     this.peerConnection.onconnectionstatechange = () => {
-      console.log("🔄 Состояние соединения:", this.peerConnection.connectionState);
+      console.log("Состояние соединения:", this.peerConnection.connectionState);
       if (this.peerConnection.connectionState === "connected") {
         this.addMessage("system", "✅ Соединение установлено!");
       }
     };
 
-    // Лог: какой кандидат выбран (host / srflx / relay)
-    this.peerConnection.addEventListener("icecandidate", (event) => {
-      if (event.candidate) {
-        const type = event.candidate.type;
-        console.log(`➡️ Кандидат: ${event.candidate.candidate}`);
-        console.log(`📌 Тип кандидата: ${type}`);
-      }
-    });
-
-    this.peerConnection.addEventListener("iceconnectionstatechange", () => {
-      console.log("📡 Текущее ICE состояние:", this.peerConnection.iceConnectionState);
-    });
-
-    // Добавляем локальные треки
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(track => {
-        console.log("🎥 Добавляю локальный трек:", track.kind);
-        this.peerConnection.addTrack(track, this.localStream);
-      });
-    }
-
-    // ICE candidates обрабатываются выше
-
-    // Обработка удаленного потока
-    this.peerConnection.ontrack = (event) => {
-      console.log("🎧 Пришёл удалённый трек:", event.streams);
-      console.log("🎧 Тип трека:", event.track.kind);
-      console.log("🎧 ID трека:", event.track.id);
-      
-      if (!this.remoteStream) {
-        this.remoteStream = new MediaStream();
-        this.remoteVideo.srcObject = this.remoteStream;
-      }
-      
-      this.remoteStream.addTrack(event.track);
-      this.remoteVideo.play().catch(() => {
-        console.warn("⚠️ Автовоспроизведение удалённого видео заблокировано");
-      });
-      
-      this.addMessage('system', 'Видео соединение установлено!');
+    this.peerConnection.oniceconnectionstatechange = () => {
+      console.log("ICE состояние:", this.peerConnection.iceConnectionState);
+      this.addMessage("system", `ICE: ${this.peerConnection.iceConnectionState}`);
     };
-
-    // Состояние соединения обрабатывается выше
   }
 
   async handleOffer(data) {
