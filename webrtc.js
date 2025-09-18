@@ -13,11 +13,24 @@ async function init() {
 
   // Получаем камеру/микрофон
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 30 }
+      }, 
+      audio: { 
+        echoCancellation: true,
+        noiseSuppression: true
+      } 
+    });
     localVideo.srcObject = localStream;
     log("✅ Камера и микрофон подключены");
+    console.log("📹 Локальные треки:", localStream.getTracks().map(t => t.kind));
   } catch (err) {
     console.error("Ошибка доступа к камере/микрофону:", err);
+    log("❌ Ошибка доступа к камере/микрофону: " + err.message);
+    alert("Ошибка доступа к камере/микрофону. Проверьте разрешения браузера.");
   }
 
   // Слушаем сигналы
@@ -177,8 +190,18 @@ async function createPeerConnection() {
   // Пришёл удалённый трек
   peerConnection.ontrack = (event) => {
     log("📡 Пришёл трек: " + event.track.kind);
-    remoteStream.addTrack(event.track);
-    remoteVideo.srcObject = remoteStream;
+    console.log("📡 Streams:", event.streams);
+    
+    // Используем event.streams[0] для мобильных устройств
+    if (event.streams && event.streams[0]) {
+      remoteVideo.srcObject = event.streams[0];
+      log("✅ Удаленное видео установлено через streams[0]");
+    } else {
+      // Fallback: добавляем в remoteStream
+      remoteStream.addTrack(event.track);
+      remoteVideo.srcObject = remoteStream;
+      log("✅ Удаленное видео установлено через addTrack");
+    }
   };
 
   // ICE кандидаты
@@ -211,6 +234,10 @@ async function startCall() {
   }
   
   const offer = await peerConnection.createOffer();
+  console.log("📄 SDP Offer:", offer.sdp);
+  log("📞 SDP содержит медиа: " + (offer.sdp.includes('m=audio') ? 'аудио' : 'нет аудио') + 
+      ", " + (offer.sdp.includes('m=video') ? 'видео' : 'нет видео'));
+  
   await peerConnection.setLocalDescription(offer);
   socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
   log("📞 Отправлен offer");
@@ -231,6 +258,10 @@ async function handleOffer({ offer, senderName }) {
   
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await peerConnection.createAnswer();
+  console.log("📄 SDP Answer:", answer.sdp);
+  log("📤 SDP содержит медиа: " + (answer.sdp.includes('m=audio') ? 'аудио' : 'нет аудио') + 
+      ", " + (answer.sdp.includes('m=video') ? 'видео' : 'нет видео'));
+  
   await peerConnection.setLocalDescription(answer);
   socket.emit("answer", { answer, roomId: currentRoom, senderName: currentName });
   log("📤 Отправлен answer");
