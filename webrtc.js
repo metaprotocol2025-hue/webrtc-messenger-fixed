@@ -240,22 +240,7 @@ class WebRTCManager {
           credential: "openrelayproject"
         },
         
-        // Дополнительные TURN серверы
-        {
-          urls: "turn:relay.metered.ca:80",
-          username: "87e4a0a0b0b0b0b0",
-          credential: "87e4a0a0b0b0b0b0"
-        },
-        {
-          urls: "turn:relay.metered.ca:443",
-          username: "87e4a0a0b0b0b0b0",
-          credential: "87e4a0a0b0b0b0b0"
-        },
-        {
-          urls: "turn:relay.metered.ca:443?transport=tcp",
-          username: "87e4a0a0b0b0b0b0",
-          credential: "87e4a0a0b0b0b0b0"
-        },
+        // Дополнительные TURN серверы (убраны placeholder креды)
         
         // Дополнительные STUN серверы
         { urls: "stun:stun.ekiga.net" },
