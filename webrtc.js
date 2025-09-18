@@ -8,6 +8,24 @@ let currentName;
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 
+// Конфигурация ICE серверов загружается из config.js
+// Если config.js не загружен, используем fallback конфигурацию
+const ICE_CONFIG = window.ICE_CONFIG || {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject"
+    }
+  ],
+  iceCandidatePoolSize: 10,
+  iceTransportPolicy: 'all',
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require'
+};
+
 // Автоматическое определение комнаты из URL
 function getRoomFromURL() {
   const urlParams = window.location.pathname.split("/");
@@ -186,30 +204,9 @@ function log(msg) {
 }
 
 async function createPeerConnection() {
-  const config = {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:19302" },
-      {
-        urls: "turn:openrelay.metered.ca:80",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-      }
-    ]
-  };
-
-  peerConnection = new RTCPeerConnection(config);
+  console.log("🔧 Создание RTCPeerConnection с конфигурацией:", ICE_CONFIG);
+  
+  peerConnection = new RTCPeerConnection(ICE_CONFIG);
 
   // Поток для удалённых треков
   remoteStream = new MediaStream();
@@ -248,22 +245,47 @@ async function createPeerConnection() {
   // ICE кандидаты
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
+      console.log("🧊 ICE кандидат:", event.candidate.candidate);
       log("➡️ Отправлен ICE кандидат");
       socket.emit("ice-candidate", {
         roomId: currentRoom,
         candidate: event.candidate,
         senderName: currentName
       });
+    } else {
+      console.log("🧊 ICE gathering завершён");
+      log("✅ ICE gathering завершён");
     }
   };
 
   peerConnection.oniceconnectionstatechange = () => {
-    log("ICE state: " + peerConnection.iceConnectionState);
+    const state = peerConnection.iceConnectionState;
+    console.log("🧊 ICE connection state:", state);
+    log("ICE state: " + state);
+    
+    if (state === 'connected' || state === 'completed') {
+      log("🎉 Соединение установлено!");
+    } else if (state === 'failed') {
+      log("❌ Соединение не удалось установить");
+    }
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    const state = peerConnection.connectionState;
+    console.log("🔗 Connection state:", state);
+    log("Connection state: " + state);
+  };
+
+  peerConnection.onsignalingstatechange = () => {
+    const state = peerConnection.signalingState;
+    console.log("📞 Signaling state:", state);
+    log("Signaling state: " + state);
   };
 }
 
 // Начало звонка
 async function startCall() {
+  console.log("📞 Начинаем звонок...");
   await createPeerConnection();
   
   // 1. Добавляем ВСЕ треки в RTCPeerConnection
@@ -282,6 +304,7 @@ async function startCall() {
   
   // 3. Устанавливаем локальное описание
   await peerConnection.setLocalDescription(offer);
+  console.log("✅ Local description установлен");
   
   // 4. Отправляем offer через сигнальный сервер
   socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
@@ -291,6 +314,7 @@ async function startCall() {
 // Обработка offer
 async function handleOffer({ offer, senderName }) {
   log("📥 Получен offer от " + senderName);
+  console.log("📥 Получен offer от", senderName);
   await createPeerConnection();
   
   // 1. Добавляем ВСЕ треки в RTCPeerConnection
@@ -303,6 +327,7 @@ async function handleOffer({ offer, senderName }) {
   
   // 2. Устанавливаем удаленное описание
   await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+  console.log("✅ Remote description установлен");
   
   // 3. Только теперь создаём answer
   const answer = await peerConnection.createAnswer();
@@ -312,6 +337,7 @@ async function handleOffer({ offer, senderName }) {
   
   // 4. Устанавливаем локальное описание
   await peerConnection.setLocalDescription(answer);
+  console.log("✅ Local description (answer) установлен");
   
   // 5. Отправляем answer через сигнальный сервер
   socket.emit("answer", { answer, roomId: currentRoom, senderName: currentName });
@@ -321,12 +347,21 @@ async function handleOffer({ offer, senderName }) {
 // Обработка answer
 async function handleAnswer({ answer }) {
   log("📥 Получен answer");
+  console.log("📥 Получен answer");
   
   try {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-    console.log("✅ Answer применён");
+    // Проверяем состояние соединения перед установкой answer
+    if (peerConnection.signalingState === 'have-local-offer') {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      console.log("✅ Answer применён");
+      log("✅ Answer применён");
+    } else {
+      console.warn("⚠️ Неожиданное состояние signaling:", peerConnection.signalingState);
+      log("⚠️ Неожиданное состояние signaling: " + peerConnection.signalingState);
+    }
   } catch (err) {
     console.error("❌ Ошибка setRemoteDescription(answer):", err);
+    log("❌ Ошибка setRemoteDescription(answer): " + err.message);
   }
 }
 
@@ -334,9 +369,11 @@ async function handleAnswer({ answer }) {
 async function handleCandidate({ candidate }) {
   try {
     await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+    console.log("✅ ICE кандидат добавлен:", candidate.candidate);
     log("✅ Добавлен ICE кандидат");
   } catch (err) {
-    console.error("Ошибка ICE:", err);
+    console.error("❌ Ошибка ICE:", err);
+    log("❌ Ошибка ICE: " + err.message);
   }
 }
 
