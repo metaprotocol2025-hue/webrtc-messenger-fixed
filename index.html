@@ -249,5 +249,37 @@
   </div>
 
   <script src="webrtc.js"></script>
+  
+  <script>
+    // Проверка User-Agent на Telegram WebView
+    function isTelegramWebView() {
+      return navigator.userAgent.toLowerCase().includes("telegram");
+    }
+
+    // Проверка на Instagram/Facebook/TikTok (тоже проблемные браузеры)
+    function isInAppBrowser() {
+      const ua = navigator.userAgent.toLowerCase();
+      return ua.includes("instagram") || ua.includes("fbav") || ua.includes("tiktok");
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      if (isTelegramWebView() || isInAppBrowser()) {
+        const warning = document.createElement("div");
+        warning.style.position = "fixed";
+        warning.style.top = "0";
+        warning.style.left = "0";
+        warning.style.width = "100%";
+        warning.style.background = "red";
+        warning.style.color = "white";
+        warning.style.padding = "15px";
+        warning.style.fontSize = "16px";
+        warning.style.fontWeight = "bold";
+        warning.style.textAlign = "center";
+        warning.style.zIndex = "9999";
+        warning.innerText = "⚠️ Видео может не работать. Откройте ссылку в Chrome или Safari!";
+        document.body.appendChild(warning);
+      }
+    });
+  </script>
 </body>
 </html>
