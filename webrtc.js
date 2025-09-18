@@ -166,11 +166,11 @@ async function createPeerConnection() {
   remoteStream = new MediaStream();
   remoteVideo.srcObject = remoteStream;
 
-  // Добавляем локальные треки
+  // Базовое добавление локальных треков (дублируется в startCall/handleOffer)
   if (localStream) {
     localStream.getTracks().forEach(track => {
       peerConnection.addTrack(track, localStream);
-      console.log("▶️ Добавлен локальный трек:", track.kind);
+      console.log("▶️ (Base) Добавлен локальный трек:", track.kind);
     });
   }
 
@@ -202,6 +202,14 @@ async function createPeerConnection() {
 async function startCall() {
   await createPeerConnection();
   
+  // Гарантированно добавляем треки перед createOffer
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, localStream);
+      console.log("▶️ (Caller) добавил локальный трек:", track.kind);
+    });
+  }
+  
   const offer = await peerConnection.createOffer();
   await peerConnection.setLocalDescription(offer);
   socket.emit("offer", { offer, roomId: currentRoom, senderName: currentName });
@@ -213,11 +221,11 @@ async function handleOffer({ offer, senderName }) {
   log("📥 Получен offer от " + senderName);
   await createPeerConnection();
   
-  // Жёстко добавляем свои треки
+  // Гарантированно добавляем треки перед createAnswer
   if (localStream) {
     localStream.getTracks().forEach(track => {
       peerConnection.addTrack(track, localStream);
-      console.log("▶️ (Offer) Добавлен локальный трек:", track.kind);
+      console.log("▶️ (Answerer) добавил локальный трек:", track.kind);
     });
   }
   
