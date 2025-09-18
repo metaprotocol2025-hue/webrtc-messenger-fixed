@@ -29,6 +29,46 @@ class WebRTCManager {
     this.setupVideoElements();
     this.setupSocket();
     this.setupEventListeners();
+    this.testTURNServers();
+  }
+
+  async testTURNServers() {
+    console.log('🔍 Тестируем TURN серверы...');
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          {
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+          }
+        ]
+      });
+
+      let hasRelay = false;
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log(`Тест ICE: ${event.candidate.type} ${event.candidate.protocol}`);
+          if (event.candidate.type === 'relay') {
+            hasRelay = true;
+            console.log('✅ TURN сервер работает!');
+            this.addMessage('system', '✅ TURN серверы доступны');
+          }
+        } else {
+          if (!hasRelay) {
+            console.log('❌ TURN серверы недоступны');
+            this.addMessage('system', '❌ TURN серверы недоступны');
+          }
+          pc.close();
+        }
+      };
+
+      // Создаем dummy offer для тестирования
+      await pc.createOffer();
+    } catch (error) {
+      console.error('Ошибка тестирования TURN:', error);
+    }
   }
 
   setupVideoElements() {
@@ -181,10 +221,8 @@ class WebRTCManager {
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
         { urls: "stun:stun2.l.google.com:19302" },
-        { urls: "stun:stun3.l.google.com:19302" },
-        { urls: "stun:stun4.l.google.com:19302" },
         
-        // Бесплатные TURN серверы Metered.ca
+        // РАБОЧИЕ TURN серверы Metered.ca (бесплатные)
         {
           urls: "turn:openrelay.metered.ca:80",
           username: "openrelayproject",
@@ -222,13 +260,7 @@ class WebRTCManager {
         { urls: "stun:stun.ekiga.net" },
         { urls: "stun:stun.ideasip.com" },
         { urls: "stun:stun.schlund.de" },
-        { urls: "stun:stun.stunprotocol.org:3478" },
-        { urls: "stun:stun.voiparound.com" },
-        { urls: "stun:stun.voipbuster.com" },
-        { urls: "stun:stun.voipstunt.com" },
-        { urls: "stun:stun.counterpath.com" },
-        { urls: "stun:stun.1und1.de" },
-        { urls: "stun:stun.gmx.net" }
+        { urls: "stun:stun.stunprotocol.org:3478" }
       ],
       iceCandidatePoolSize: 10,
       iceTransportPolicy: 'all',
@@ -248,7 +280,19 @@ class WebRTCManager {
     // Обработка ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log('ICE candidate:', event.candidate.type, event.candidate.protocol, event.candidate.address);
+        const candidate = event.candidate;
+        console.log(`ICE candidate: ${candidate.type} ${candidate.protocol} ${candidate.address}:${candidate.port}`);
+        
+        // Проверяем наличие TURN (relay) кандидатов
+        if (candidate.type === 'relay') {
+          console.log('✅ TURN сервер работает! Relay candidate получен');
+          this.addMessage('system', '✅ TURN сервер подключен');
+        } else if (candidate.type === 'srflx') {
+          console.log('📡 STUN сервер работает, но TURN не найден');
+        } else if (candidate.type === 'host') {
+          console.log('🏠 Локальный кандидат');
+        }
+        
         this.socket.emit('ice-candidate', {
           roomId: this.currentRoom,
           candidate: event.candidate,
