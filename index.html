@@ -19,40 +19,49 @@
     /* Контейнер */
     #app {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       height: 100vh;
+      gap: 10px;
+      padding: 10px;
+      box-sizing: border-box;
     }
 
-    /* Видео */
-    #video-container {
-      position: relative;
-      flex: 1;
-      background: black;
+    /* Контейнер с видео */
+    #videos {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex: 2;
     }
 
+    /* Видео участника */
     #remoteVideo {
-      width: 100%;
-      height: 100%;
+      width: 70%;
+      height: auto;
+      max-height: 80vh;
+      background: black;
+      border-radius: 8px;
       object-fit: cover;
     }
 
+    /* Видео своё */
     #localVideo {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
       width: 30%;
-      max-width: 150px;
-      border: 2px solid white;
+      height: auto;
+      max-height: 40vh;
+      background: black;
       border-radius: 8px;
+      object-fit: cover;
     }
 
     /* Чат */
     #chat {
-      flex: 0 0 200px;
+      flex: 1;
       overflow-y: auto;
       background: #2c1a4d;
       color: white;
       padding: 5px;
+      min-width: 300px;
     }
 
     .message {
@@ -107,6 +116,30 @@
 
     /* Мобильная версия */
     @media (max-width: 768px) {
+      #app {
+        flex-direction: column;
+      }
+
+      #videos {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #remoteVideo {
+        width: 100%;
+        max-height: 60vh;
+      }
+
+      #localVideo {
+        width: 100%;
+        max-height: 30vh;
+      }
+
+      #chat {
+        flex: 0 0 150px;
+        min-width: 0;
+      }
+
       #controls {
         flex-direction: column;
         gap: 5px;
@@ -115,10 +148,6 @@
       #controls input, #controls button {
         width: 100%;
         margin: 2px 0;
-      }
-
-      #chat {
-        flex: 0 0 150px;
       }
     }
 
@@ -152,22 +181,22 @@
 <body>
   <div id="app">
     <!-- Видео -->
-    <div id="video-container">
-      <video id="remoteVideo" autoplay playsinline></video>
+    <div id="videos">
       <video id="localVideo" autoplay playsinline muted></video>
+      <video id="remoteVideo" autoplay playsinline></video>
     </div>
 
     <!-- Чат -->
     <div id="chat"></div>
+  </div>
 
-    <!-- Панель управления -->
-    <div id="controls">
-      <input id="roomInput" placeholder="room1" value="room1" />
-      <input id="nameInput" placeholder="Пользователь1" value="Пользователь1" />
-      <button id="joinBtn">Войти в комнату</button>
-      <button id="callBtn" disabled>Начать звонок</button>
-      <button id="endBtn" disabled>Завершить</button>
-    </div>
+  <!-- Панель управления -->
+  <div id="controls">
+    <input id="roomInput" placeholder="room1" value="room1" />
+    <input id="nameInput" placeholder="Пользователь1" value="Пользователь1" />
+    <button id="joinBtn">Войти в комнату</button>
+    <button id="callBtn" disabled>Начать звонок</button>
+    <button id="endBtn" disabled>Завершить</button>
   </div>
   <script src="webrtc.js"></script>
   <script>
