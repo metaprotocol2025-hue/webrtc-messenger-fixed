@@ -16,7 +16,6 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
 // Serve static files with correct MIME types
 app.use((req, res, next) => {
@@ -35,6 +34,12 @@ app.post("/api/create-user", (req, res) => {
     return res.status(400).json({ error: "Имя обязательно" });
   }
   res.json({ success: true, user: { name } });
+});
+
+// Serve webrtc.js with correct headers
+app.get('/webrtc.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'webrtc.js'));
 });
 
 // Serve index.html for room routes
