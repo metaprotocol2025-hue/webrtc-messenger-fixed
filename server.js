@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const fetch = require("node-fetch");
 
 const app = express();
 const server = http.createServer(app);
@@ -42,9 +43,50 @@ app.get('*', (req, res) => {
 // Store rooms
 const rooms = new Map();
 
+// Keep-alive system
+const activeUsers = new Map(); // socketId -> { lastPing, userName, roomId }
+const KEEP_ALIVE_INTERVAL = 30000; // 30 seconds
+const PING_TIMEOUT = 60000; // 1 minute
+
+// Keep-alive endpoint for Render
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    activeUsers: activeUsers.size,
+    rooms: rooms.size
+  });
+});
+
+// Ping endpoint to keep Render alive
+app.get("/api/ping", (req, res) => {
+  res.json({ 
+    pong: true, 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Socket.IO
 io.on("connection", (socket) => {
   console.log("✅ Новый клиент:", socket.id);
+  
+  // Initialize user in activeUsers
+  activeUsers.set(socket.id, {
+    lastPing: Date.now(),
+    userName: null,
+    roomId: null
+  });
+
+  // Ping handler
+  socket.on("ping", () => {
+    const user = activeUsers.get(socket.id);
+    if (user) {
+      user.lastPing = Date.now();
+      activeUsers.set(socket.id, user);
+    }
+    socket.emit("pong", { timestamp: Date.now() });
+  });
 
   socket.on("join-room", (roomId, userName) => {
     console.log(`${userName} присоединяется к комнате ${roomId}`);
@@ -57,6 +99,15 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     socket.roomId = roomId;
     socket.userName = userName;
+    
+    // Update user info
+    const user = activeUsers.get(socket.id);
+    if (user) {
+      user.userName = userName;
+      user.roomId = roomId;
+      user.lastPing = Date.now();
+      activeUsers.set(socket.id, user);
+    }
     
     // Initialize room if it doesn't exist
     if (!rooms.has(roomId)) {
@@ -124,30 +175,70 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Handle disconnect
-  socket.on("disconnect", () => {
-    console.log("❌ Отключился:", socket.id);
-    
-    if (socket.roomId) {
-      const room = rooms.get(socket.roomId);
-      if (room) {
-        room.users.delete(socket.id);
+      // Handle disconnect
+      socket.on("disconnect", () => {
+        console.log("❌ Отключился:", socket.id);
         
-        // Notify others in the room
-        socket.to(socket.roomId).emit("user-disconnected", {
-          socketId: socket.id,
-          userName: socket.userName
-        });
+        // Remove from activeUsers
+        activeUsers.delete(socket.id);
         
-        // Clean up empty rooms
-        if (room.users.size === 0) {
-          rooms.delete(socket.roomId);
-          console.log(`Комната ${socket.roomId} удалена (пустая)`);
+        if (socket.roomId) {
+          const room = rooms.get(socket.roomId);
+          if (room) {
+            room.users.delete(socket.id);
+            
+            // Notify others in the room
+            socket.to(socket.roomId).emit("user-disconnected", {
+              socketId: socket.id,
+              userName: socket.userName
+            });
+            
+            // Clean up empty rooms
+            if (room.users.size === 0) {
+              rooms.delete(socket.roomId);
+              console.log(`Комната ${socket.roomId} удалена (пустая)`);
+            }
+          }
         }
-      }
-    }
-  });
+      });
 });
+
+// Periodic cleanup of inactive users
+setInterval(() => {
+  const now = Date.now();
+  const inactiveUsers = [];
+  
+  for (const [socketId, user] of activeUsers.entries()) {
+    if (now - user.lastPing > PING_TIMEOUT) {
+      inactiveUsers.push(socketId);
+    }
+  }
+  
+  inactiveUsers.forEach(socketId => {
+    const socket = io.sockets.sockets.get(socketId);
+    if (socket) {
+      console.log(`🧹 Удаляем неактивного пользователя: ${socketId}`);
+      socket.disconnect(true);
+    }
+    activeUsers.delete(socketId);
+  });
+  
+  if (inactiveUsers.length > 0) {
+    console.log(`🧹 Удалено неактивных пользователей: ${inactiveUsers.length}`);
+  }
+}, KEEP_ALIVE_INTERVAL);
+
+// Keep Render alive with periodic requests
+setInterval(async () => {
+  try {
+    const response = await fetch(`http://localhost:${PORT}/api/ping`);
+    if (response.ok) {
+      console.log("💓 Keep-alive ping sent to Render");
+    }
+  } catch (error) {
+    console.log("⚠️ Keep-alive ping failed:", error.message);
+  }
+}, 300000); // Every 5 minutes
 
 // Error handling
 process.on('uncaughtException', (err) => {
@@ -162,4 +253,5 @@ process.on('unhandledRejection', (reason, promise) => {
 server.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
   console.log(`📡 WebRTC Messenger готов: http://localhost:${PORT}`);
+  console.log(`💓 Keep-alive система активирована`);
 });

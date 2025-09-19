@@ -7,6 +7,7 @@ let peerConnection;
 let socket;
 let currentRoom;
 let currentName;
+let pingInterval;
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
@@ -123,9 +124,13 @@ async function init() {
   socket.on("offer", handleOffer);
   socket.on("answer", handleAnswer);
   socket.on("ice-candidate", handleCandidate);
+  socket.on("pong", handlePong);
   
   // UI обработчики
   setupUI();
+  
+  // Запускаем keep-alive
+  startPing();
   
   // Автоматическое подключение к комнате
   const roomId = getRoomFromURL();
@@ -220,6 +225,23 @@ function setupUI() {
   socket.on('chat-message', (data) => {
     addMessage(data.userName, data.message);
   });
+
+  // Обработка отключения/переподключения
+  socket.on('disconnect', () => {
+    log("❌ Соединение с сервером потеряно");
+    stopPing();
+  });
+
+  socket.on('connect', () => {
+    log("✅ Соединение с сервером восстановлено");
+    startPing();
+    
+    // Переподключаемся к комнате если были подключены
+    if (currentRoom && currentName) {
+      socket.emit('join-room', currentRoom, currentName);
+      log(`🔄 Переподключение к комнате: ${currentRoom}`);
+    }
+  });
 }
 
 function addMessage(sender, message) {
@@ -269,6 +291,31 @@ function playJoinSound() {
   } catch (error) {
     console.log("Не удалось воспроизвести звук:", error);
   }
+}
+
+function startPing() {
+  // Отправляем ping каждые 25 секунд
+  pingInterval = setInterval(() => {
+    if (socket && socket.connected) {
+      socket.emit('ping');
+      console.log("💓 Ping отправлен");
+    }
+  }, 25000);
+  
+  console.log("💓 Keep-alive система запущена");
+}
+
+function stopPing() {
+  if (pingInterval) {
+    clearInterval(pingInterval);
+    pingInterval = null;
+    console.log("💓 Keep-alive система остановлена");
+  }
+}
+
+function handlePong(data) {
+  console.log("💓 Pong получен:", data.timestamp);
+  log("💓 Соединение активно");
 }
 
 function endCall() {
