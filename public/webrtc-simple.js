@@ -14,26 +14,17 @@ const remoteVideo = document.getElementById("remoteVideo");
 // Конфигурация ICE серверов для WebRTC
 const ICE_CONFIG = {
   iceServers: [
-    // Google STUN серверы (бесплатные)
+    // Google STUN серверы (основные)
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
     
     // Дополнительные STUN серверы
+    { urls: "stun:stun.stunprotocol.org:3478" },
     { urls: "stun:stun.ekiga.net" },
     { urls: "stun:stun.ideasip.com" },
-    { urls: "stun:stun.schlund.de" },
-    { urls: "stun:stun.stunprotocol.org:3478" },
-    { urls: "stun:stun.voiparound.com" },
-    { urls: "stun:stun.voipbuster.com" },
-    { urls: "stun:stun.voipstunt.com" },
-    { urls: "stun:stun.counterpath.com" },
-    { urls: "stun:stun.1und1.de" },
-    { urls: "stun:stun.gmx.net" },
     
-    // Metered.ca TURN серверы (бесплатные для тестов)
+    // Рабочие TURN серверы
     {
       urls: [
         "turn:openrelay.metered.ca:80?transport=udp",
@@ -43,33 +34,17 @@ const ICE_CONFIG = {
       credential: "openrelayproject"
     },
     
-    // Viagenie TURN сервер (дополнительный бесплатный)
+    // Дополнительный TURN сервер
     {
       urls: "turn:numb.viagenie.ca",
       username: "webrtc@live.com",
       credential: "muazkh"
-    },
-    
-    // Дополнительные TURN серверы
-    {
-      urls: "turn:turn.bistri.com:80",
-      username: "homeo",
-      credential: "homeo"
-    },
-    {
-      urls: "turn:turn.anyfirewall.com:443?transport=tcp",
-      username: "webrtc",
-      credential: "webrtc"
-    },
-    {
-      urls: "turn:turn.anyfirewall.com:80?transport=udp",
-      username: "webrtc",
-      credential: "webrtc"
     }
   ],
   iceCandidatePoolSize: 10,
-  bundlePolicy: "balanced",
-  iceTransportPolicy: "all"
+  bundlePolicy: "max-bundle",
+  iceTransportPolicy: "all",
+  rtcpMuxPolicy: "require"
 };
 
 console.log("🔧 Используемая конфигурация ICE:", ICE_CONFIG);
@@ -376,6 +351,21 @@ async function createPeerConnection() {
     } else {
       console.log("🧊 ICE gathering завершён");
       log("✅ ICE gathering завершён");
+      
+      // Проверяем, есть ли TURN кандидаты
+      const stats = peerConnection.getStats();
+      stats.then(stats => {
+        let hasTurnCandidate = false;
+        stats.forEach(report => {
+          if (report.type === 'local-candidate' && report.candidateType === 'relay') {
+            hasTurnCandidate = true;
+            console.log("✅ Найден TURN кандидат:", report.address);
+          }
+        });
+        if (!hasTurnCandidate) {
+          log("⚠️ TURN кандидаты не найдены - возможны проблемы с соединением");
+        }
+      });
     }
   };
 
@@ -389,10 +379,28 @@ async function createPeerConnection() {
       log("🎉 Соединение установлено!");
     } else if (state === 'failed') {
       log("❌ Соединение не удалось установить");
+      // Попытка переподключения
+      setTimeout(() => {
+        if (peerConnection && peerConnection.iceConnectionState === 'failed') {
+          log("🔄 Попытка переподключения...");
+          peerConnection.restartIce();
+        }
+      }, 2000);
     } else if (state === 'disconnected') {
       log("⚠️ Соединение разорвано");
+      // Попытка восстановления
+      setTimeout(() => {
+        if (peerConnection && peerConnection.iceConnectionState === 'disconnected') {
+          log("🔄 Попытка восстановления соединения...");
+          peerConnection.restartIce();
+        }
+      }, 1000);
     } else if (state === 'checking') {
       log("🔍 Проверка соединения...");
+    } else if (state === 'new') {
+      log("🆕 Новое соединение");
+    } else if (state === 'gathering') {
+      log("📡 Сбор ICE кандидатов...");
     }
   };
 
@@ -405,8 +413,21 @@ async function createPeerConnection() {
       log("✅ PeerConnection установлен");
     } else if (state === 'failed') {
       log("❌ PeerConnection не удался");
+      // Попытка пересоздания соединения
+      setTimeout(() => {
+        if (peerConnection && peerConnection.connectionState === 'failed') {
+          log("🔄 Пересоздание соединения...");
+          if (currentRoom) {
+            startCall();
+          }
+        }
+      }, 3000);
     } else if (state === 'disconnected') {
       log("⚠️ PeerConnection разорван");
+    } else if (state === 'connecting') {
+      log("🔗 Установка соединения...");
+    } else if (state === 'closed') {
+      log("🔒 Соединение закрыто");
     }
   };
 
