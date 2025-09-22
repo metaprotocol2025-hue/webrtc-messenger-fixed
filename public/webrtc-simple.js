@@ -453,6 +453,13 @@ async function createPeerConnection() {
 // Начало звонка
 async function startCall() {
   console.log("📞 Начинаем звонок...");
+  
+  // Закрываем предыдущее соединение если есть
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  
   await createPeerConnection();
   
   if (localStream) {
@@ -480,6 +487,13 @@ async function startCall() {
 async function handleOffer({ offer, senderName }) {
   log("📥 Получен offer от " + senderName);
   console.log("📥 Получен offer от", senderName);
+  
+  // Закрываем предыдущее соединение если есть
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  
   await createPeerConnection();
   
   if (localStream) {
@@ -510,32 +524,31 @@ async function handleOffer({ offer, senderName }) {
 async function handleAnswer({ answer }) {
   log("📥 Получен answer");
   console.log("📥 Получен answer");
+  console.log("📥 Текущее состояние signaling:", peerConnection.signalingState);
   
   try {
+    // Проверяем состояние и применяем answer
     if (peerConnection.signalingState === 'have-local-offer') {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       console.log("✅ Answer применён");
       log("✅ Answer применён");
+    } else if (peerConnection.signalingState === 'stable') {
+      // Если соединение уже стабильно, возможно answer пришёл повторно
+      console.log("⚠️ Соединение уже стабильно, пропускаем answer");
+      log("⚠️ Соединение уже стабильно, пропускаем answer");
     } else {
       console.warn("⚠️ Неожиданное состояние signaling:", peerConnection.signalingState);
       log("⚠️ Неожиданное состояние signaling: " + peerConnection.signalingState);
       
-      log("⏳ Попытка отложенной установки answer...");
-      setTimeout(async () => {
-        try {
-          if (peerConnection.signalingState === 'have-local-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-            console.log("✅ Answer применён (отложенно)");
-            log("✅ Answer применён (отложенно)");
-          } else {
-            console.error("❌ Состояние всё ещё неправильное:", peerConnection.signalingState);
-            log("❌ Состояние всё ещё неправильное: " + peerConnection.signalingState);
-          }
-        } catch (err) {
-          console.error("❌ Ошибка отложенной установки answer:", err);
-          log("❌ Ошибка отложенной установки answer: " + err.message);
-        }
-      }, 100);
+      // Попробуем применить answer в любом случае
+      try {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log("✅ Answer применён (принудительно)");
+        log("✅ Answer применён (принудительно)");
+      } catch (forceErr) {
+        console.error("❌ Ошибка принудительной установки answer:", forceErr);
+        log("❌ Ошибка принудительной установки answer: " + forceErr.message);
+      }
     }
   } catch (err) {
     console.error("❌ Ошибка setRemoteDescription(answer):", err);
