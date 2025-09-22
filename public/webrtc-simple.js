@@ -18,13 +18,22 @@ const ICE_CONFIG = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
     
     // Дополнительные STUN серверы
     { urls: "stun:stun.stunprotocol.org:3478" },
     { urls: "stun:stun.ekiga.net" },
     { urls: "stun:stun.ideasip.com" },
+    { urls: "stun:stun.schlund.de" },
+    { urls: "stun:stun.voiparound.com" },
+    { urls: "stun:stun.voipbuster.com" },
+    { urls: "stun:stun.voipstunt.com" },
+    { urls: "stun:stun.counterpath.com" },
+    { urls: "stun:stun.1und1.de" },
+    { urls: "stun:stun.gmx.net" },
     
-    // Рабочие TURN серверы
+    // Metered.ca TURN серверы (основные)
     {
       urls: [
         "turn:openrelay.metered.ca:80?transport=udp",
@@ -34,14 +43,14 @@ const ICE_CONFIG = {
       credential: "openrelayproject"
     },
     
-    // Дополнительные TURN серверы
+    // Viagenie TURN сервер
     {
       urls: "turn:numb.viagenie.ca",
       username: "webrtc@live.com",
       credential: "muazkh"
     },
     
-    // Дополнительные бесплатные TURN серверы
+    // Дополнительные TURN серверы
     {
       urls: "turn:turn.bistri.com:80",
       username: "homeo",
@@ -57,8 +66,15 @@ const ICE_CONFIG = {
       username: "webrtc",
       credential: "webrtc"
     },
+    
+    // Дополнительные бесплатные TURN серверы
     {
       urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+      username: "webrtc",
+      credential: "webrtc"
+    },
+    {
+      urls: "turn:turn.anyfirewall.com:80?transport=udp",
       username: "webrtc",
       credential: "webrtc"
     }
@@ -66,7 +82,9 @@ const ICE_CONFIG = {
   iceCandidatePoolSize: 10,
   bundlePolicy: "max-bundle",
   iceTransportPolicy: "all",
-  rtcpMuxPolicy: "require"
+  rtcpMuxPolicy: "require",
+  iceCandidateTimeout: 30000,
+  iceGatheringTimeout: 10000
 };
 
 console.log("🔧 Используемая конфигурация ICE:", ICE_CONFIG);
