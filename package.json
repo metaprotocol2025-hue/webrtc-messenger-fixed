@@ -4,8 +4,9 @@
   "description": "WebRTC Video Messenger with Chat",
   "main": "server.js",
   "scripts": {
-    "start": "node server-minimal.js",
-    "dev": "nodemon server-minimal.js",
+    "start": "node server-ultra-minimal.js",
+    "dev": "nodemon server-ultra-minimal.js",
+    "minimal": "node server-minimal.js",
     "simple": "node server-simple.js",
     "full": "node server.js",
     "keep-alive": "node keep-alive.js"
