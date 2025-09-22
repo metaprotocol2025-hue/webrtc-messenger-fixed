@@ -307,23 +307,42 @@ async function createPeerConnection() {
   
   peerConnection = new RTCPeerConnection(ICE_CONFIG);
 
+  // Создаем поток для удалённых треков
+  remoteStream = new MediaStream();
+  remoteVideo.srcObject = remoteStream;
+
   // Пришёл удалённый трек
   peerConnection.ontrack = (event) => {
-    console.log("📡 Пришёл трек:", event.track.kind);
+    console.log("📡 Пришёл трек:", event.track.kind, event.track.id);
 
     if (event.track.kind === "video") {
-      if (event.streams && event.streams[0]) {
-        remoteVideo.srcObject = event.streams[0];
-        remoteVideo.autoplay = true;
-        remoteVideo.playsInline = true;
-        console.log("✅ Установлено удалённое ВИДЕО");
-        log("✅ Удаленное видео установлено");
-      }
+      // Добавляем трек в поток
+      remoteStream.addTrack(event.track);
+      remoteVideo.srcObject = remoteStream;
+      remoteVideo.autoplay = true;
+      remoteVideo.playsInline = true;
+      remoteVideo.muted = false;
+      
+      // Принудительное воспроизведение
+      remoteVideo.play().then(() => {
+        console.log("✅ Видео воспроизводится");
+        log("✅ Видео воспроизводится");
+      }).catch(err => {
+        console.error("❌ Ошибка воспроизведения видео:", err);
+        log("❌ Ошибка воспроизведения видео: " + err.message);
+      });
+      
+      console.log("✅ Установлено удалённое ВИДЕО");
+      log("✅ Удаленное видео установлено");
     }
 
     if (event.track.kind === "audio") {
+      // Добавляем аудио трек в поток
+      remoteStream.addTrack(event.track);
+      
+      // Создаем скрытый аудио элемент
       let audioElem = document.createElement("audio");
-      audioElem.srcObject = event.streams[0];
+      audioElem.srcObject = remoteStream;
       audioElem.autoplay = true;
       audioElem.controls = false;
       audioElem.style.display = "none";
@@ -338,7 +357,17 @@ async function createPeerConnection() {
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
       console.log("🧊 ICE кандидат:", event.candidate.candidate);
-      log("➡️ Отправлен ICE кандидат");
+      console.log("🧊 Тип кандидата:", event.candidate.type);
+      console.log("🧊 Протокол:", event.candidate.protocol);
+      console.log("🧊 Адрес:", event.candidate.address);
+      
+      // Определяем тип кандидата
+      let candidateType = "host";
+      if (event.candidate.type === "srflx") candidateType = "STUN";
+      if (event.candidate.type === "relay") candidateType = "TURN";
+      
+      log(`➡️ Отправлен ICE кандидат (${candidateType}): ${event.candidate.address}`);
+      
       socket.emit("ice-candidate", {
         roomId: currentRoom,
         candidate: event.candidate,
@@ -414,6 +443,8 @@ async function startCall() {
   
   const offer = await peerConnection.createOffer();
   console.log("📄 SDP Offer:", offer.sdp);
+  console.log("📄 SDP содержит аудио:", offer.sdp.includes('m=audio'));
+  console.log("📄 SDP содержит видео:", offer.sdp.includes('m=video'));
   log("📞 SDP содержит медиа: " + (offer.sdp.includes('m=audio') ? 'аудио' : 'нет аудио') + 
       ", " + (offer.sdp.includes('m=video') ? 'видео' : 'нет видео'));
   
@@ -442,6 +473,8 @@ async function handleOffer({ offer, senderName }) {
   
   const answer = await peerConnection.createAnswer();
   console.log("📄 SDP Answer:", answer.sdp);
+  console.log("📄 SDP содержит аудио:", answer.sdp.includes('m=audio'));
+  console.log("📄 SDP содержит видео:", answer.sdp.includes('m=video'));
   log("📤 SDP содержит медиа: " + (answer.sdp.includes('m=audio') ? 'аудио' : 'нет аудио') + 
       ", " + (answer.sdp.includes('m=video') ? 'видео' : 'нет видео'));
   
