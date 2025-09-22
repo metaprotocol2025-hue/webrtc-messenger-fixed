@@ -112,3 +112,5 @@ REM Удаляем временный файл
 del temp_setup.bat
 
 pause
+
+

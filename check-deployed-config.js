@@ -147,3 +147,5 @@ async function checkDeployedMessenger() {
 
 // Запуск проверки
 checkDeployedMessenger();
+
+

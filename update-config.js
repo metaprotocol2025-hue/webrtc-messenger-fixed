@@ -62,3 +62,5 @@ const endLine = lines.findIndex((line, index) => index > startLine && line.inclu
 if (startLine !== -1 && endLine !== -1) {
   console.log(lines.slice(startLine, endLine + 1).join('\n'));
 }
+
+

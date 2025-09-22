@@ -30,3 +30,5 @@ setInterval(pingServer, PING_INTERVAL);
 pingServer();
 
 console.log(`💓 Keep-alive будет отправлять ping каждые ${PING_INTERVAL / 1000} секунд`);
+
+

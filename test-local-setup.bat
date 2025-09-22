@@ -62,3 +62,5 @@ echo    Нажмите Ctrl+C для остановки
 echo.
 
 npm start
+
+

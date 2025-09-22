@@ -126,3 +126,5 @@ echo 📚 Подробная документация: ORACLE_CLOUD_SETUP.md
 echo.
 
 pause
+
+

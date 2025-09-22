@@ -16,3 +16,5 @@ availability_domain = "us-ashburn-1"
 # 2. Перейдите в Identity & Security > Compartments
 # 3. Скопируйте OCID корневого компартмента
 # 4. Замените "ocid1.compartment.oc1..aaaaaaaa..." на ваш OCID
+
+

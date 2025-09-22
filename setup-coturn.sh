@@ -109,3 +109,5 @@ echo "   sudo systemctl restart coturn"
 echo "   sudo systemctl stop coturn"
 echo ""
 echo "✅ TURN-сервер готов к использованию!"
+
+
