@@ -34,11 +34,33 @@ const ICE_CONFIG = {
       credential: "openrelayproject"
     },
     
-    // Дополнительный TURN сервер
+    // Дополнительные TURN серверы
     {
       urls: "turn:numb.viagenie.ca",
       username: "webrtc@live.com",
       credential: "muazkh"
+    },
+    
+    // Дополнительные бесплатные TURN серверы
+    {
+      urls: "turn:turn.bistri.com:80",
+      username: "homeo",
+      credential: "homeo"
+    },
+    {
+      urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+      username: "webrtc",
+      credential: "webrtc"
+    },
+    {
+      urls: "turn:turn.anyfirewall.com:80?transport=udp",
+      username: "webrtc",
+      credential: "webrtc"
+    },
+    {
+      urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+      username: "webrtc",
+      credential: "webrtc"
     }
   ],
   iceCandidatePoolSize: 10,
